@@ -1,5 +1,5 @@
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import { _generateMetadata } from "app/_utils";
-
 import Page from "~/more/more-page-view";
 
 export const generateMetadata = async () => {
@@ -13,6 +13,8 @@ export const generateMetadata = async () => {
 };
 
 const ServerPageWrapper = async () => {
+  await requireAuthenticatedPage("/more");
+
   return <Page />;
 };
 

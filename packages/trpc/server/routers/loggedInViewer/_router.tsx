@@ -1,4 +1,4 @@
-import authedProcedure from "../../procedures/authedProcedure";
+import authedProcedure, { authedAdminProcedure } from "../../procedures/authedProcedure";
 import { router } from "../../trpc";
 import { ZAddNotificationsSubscriptionInputSchema } from "./addNotificationsSubscription.schema";
 import { ZAddSecondaryEmailInputSchema } from "./addSecondaryEmail.schema";
@@ -32,7 +32,7 @@ export const loggedInViewerRouter = router({
     return unlinkConnectedAccountHandler(opts);
   }),
 
-  eventTypeOrder: authedProcedure.input(ZEventTypeOrderInputSchema).mutation(async ({ ctx, input }) => {
+  eventTypeOrder: authedAdminProcedure.input(ZEventTypeOrderInputSchema).mutation(async ({ ctx, input }) => {
     const { eventTypeOrderHandler } = await import("./eventTypeOrder.handler");
     return eventTypeOrderHandler({ ctx, input });
   }),

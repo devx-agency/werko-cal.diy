@@ -26,7 +26,7 @@ export const isAuthed = middleware(async ({ ctx, next }) => {
 export const isAdminMiddleware = isAuthed.unstable_pipe(({ ctx, next }) => {
   const { user } = ctx;
   if (user?.role !== "ADMIN") {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({ ctx: { user: user } });
 });

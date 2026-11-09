@@ -1,5 +1,6 @@
 "use client";
 
+import process from "node:process";
 import { ErrorCode } from "@calcom/features/auth/lib/ErrorCode";
 import { HOSTED_CAL_FEATURES, WEBAPP_URL, WEBSITE_URL } from "@calcom/lib/constants";
 import { emailRegex } from "@calcom/lib/emailSchema";
@@ -36,13 +37,9 @@ interface LoginValues {
   csrfToken: string;
 }
 
-const MicrosoftIcon = () => (
-  <img className="size-4" src="/microsoft-logo.svg" alt="" />
-);
+const MicrosoftIcon = () => <img className="size-4" src="/microsoft-logo.svg" alt="" />;
 
-const GoogleIcon = () => (
-  <img className="size-4" src="/google-icon-colored.svg" alt="" />
-);
+const GoogleIcon = () => <img className="size-4" src="/google-icon-colored.svg" alt="" />;
 
 function BackgroundGrid() {
   const rows = 9;
@@ -105,6 +102,7 @@ export default function Login({
   csrfToken,
   isGoogleLoginEnabled,
   isOutlookLoginEnabled,
+  isAuthentikLoginEnabled,
   totpEmail,
 }: PageProps) {
   const searchParams = useCompatSearchParams();
@@ -137,18 +135,11 @@ export default function Login({
     [ErrorCode.ThirdPartyIdentityProviderEnabled]: t("account_created_with_identity_provider"),
   };
 
-  let callbackUrl = searchParams?.get("callbackUrl") || "";
-
-  if (/"\//.test(callbackUrl)) callbackUrl = callbackUrl.substring(1);
-
-  // If not absolute URL, make it absolute
-  if (!/^https?:\/\//.test(callbackUrl)) {
-    callbackUrl = `${WEBAPP_URL}/${callbackUrl}`;
-  }
-
-  const safeCallbackUrl = getSafeRedirectUrl(callbackUrl);
-
-  callbackUrl = safeCallbackUrl || "";
+  const callbackParam = searchParams?.get("callbackUrl") || "/";
+  const callbackTarget = /^https?:\/\//i.test(callbackParam)
+    ? callbackParam
+    : new URL(callbackParam.startsWith("/") ? callbackParam : `/${callbackParam}`, WEBAPP_URL).toString();
+  const callbackUrl = getSafeRedirectUrl(callbackTarget) ?? WEBAPP_URL;
 
   const onSubmit = async (values: LoginValues) => {
     setErrorMessage(null);
@@ -170,7 +161,7 @@ export default function Login({
     else setErrorMessage(errorMessages[res.error] || t("something_went_wrong"));
   };
 
-  const showSocialLogin = isGoogleLoginEnabled || isOutlookLoginEnabled;
+  const showSocialLogin = isGoogleLoginEnabled || isOutlookLoginEnabled || isAuthentikLoginEnabled;
   const showSignupLink =
     process.env.NEXT_PUBLIC_DISABLE_SIGNUP !== "true" && searchParams?.get("register") !== "false";
 
@@ -228,6 +219,22 @@ export default function Login({
                       <MicrosoftIcon />
                       <span>{t("signin_with_microsoft")}</span>
                       {lastUsed === "microsoft" && <LastUsed />}
+                    </Button>
+                  )}
+                  {isAuthentikLoginEnabled && (
+                    <Button
+                      variant="outline"
+                      className="w-full py-1"
+                      data-testid="authentik"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        setLastUsed("authentik");
+                        await signIn("authentik", {
+                          callbackUrl,
+                        });
+                      }}>
+                      <span>{t("signin_with_authentik")}</span>
+                      {lastUsed === "authentik" && <LastUsed />}
                     </Button>
                   )}
                 </div>

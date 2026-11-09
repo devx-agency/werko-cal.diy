@@ -1,6 +1,5 @@
 import { UserRepository } from "@calcom/features/users/repositories/UserRepository";
 import type { PrismaClient } from "@calcom/prisma";
-import { MembershipRole } from "@calcom/prisma/enums";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BookingRepository } from "../repositories/BookingRepository";
 import { BookingAccessService } from "./BookingAccessService";
@@ -21,9 +20,7 @@ describe("BookingAccessService", () => {
   };
   let mockUserRepo: {
     getUserOrganizationAndTeams: ReturnType<typeof vi.fn>;
-  };
-  let mockPermissionCheckService: {
-    checkPermission: ReturnType<typeof vi.fn>;
+    isAdminOfTeamOrParentOrg: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -37,10 +34,7 @@ describe("BookingAccessService", () => {
 
     mockUserRepo = {
       getUserOrganizationAndTeams: vi.fn(),
-    };
-
-    mockPermissionCheckService = {
-      checkPermission: vi.fn(),
+      isAdminOfTeamOrParentOrg: vi.fn(),
     };
 
     vi.mocked(BookingRepository).mockImplementation(function () {
@@ -51,8 +45,6 @@ describe("BookingAccessService", () => {
     });
 
     service = new BookingAccessService(mockPrismaClient);
-
-    (service as any).permissionCheckService = mockPermissionCheckService;
   });
 
   describe("doesUserIdHaveAccessToBooking", () => {
@@ -179,7 +171,7 @@ describe("BookingAccessService", () => {
         };
 
         mockBookingRepo.findByUidIncludeEventType.mockResolvedValue(mockBooking);
-        mockPermissionCheckService.checkPermission.mockResolvedValue(true);
+        mockUserRepo.isAdminOfTeamOrParentOrg.mockResolvedValue(true);
 
         const result = await service.doesUserIdHaveAccessToBooking({
           userId: 123,
@@ -187,11 +179,9 @@ describe("BookingAccessService", () => {
         });
 
         expect(result).toBe(true);
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenCalledWith({
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenCalledWith({
           userId: 123,
           teamId: 100,
-          permission: "booking.readTeamBookings",
-          fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
         });
       });
 
@@ -205,7 +195,7 @@ describe("BookingAccessService", () => {
         };
 
         mockBookingRepo.findByUidIncludeEventType.mockResolvedValue(mockBooking);
-        mockPermissionCheckService.checkPermission.mockResolvedValue(false);
+        mockUserRepo.isAdminOfTeamOrParentOrg.mockResolvedValue(false);
 
         const result = await service.doesUserIdHaveAccessToBooking({
           userId: 123,
@@ -213,11 +203,9 @@ describe("BookingAccessService", () => {
         });
 
         expect(result).toBe(false);
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenCalledWith({
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenCalledWith({
           userId: 123,
           teamId: 100,
-          permission: "booking.readTeamBookings",
-          fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
         });
       });
     });
@@ -237,7 +225,7 @@ describe("BookingAccessService", () => {
 
         mockBookingRepo.findByUidIncludeEventType.mockResolvedValue(mockBooking);
         mockUserRepo.getUserOrganizationAndTeams.mockResolvedValue(mockBookingOwner);
-        mockPermissionCheckService.checkPermission.mockResolvedValue(true);
+        mockUserRepo.isAdminOfTeamOrParentOrg.mockResolvedValue(true);
 
         const result = await service.doesUserIdHaveAccessToBooking({
           userId: 123,
@@ -245,11 +233,9 @@ describe("BookingAccessService", () => {
         });
 
         expect(result).toBe(true);
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenCalledWith({
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenCalledWith({
           userId: 123,
           teamId: 200,
-          permission: "booking.readOrgBookings",
-          fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
         });
       });
 
@@ -267,7 +253,7 @@ describe("BookingAccessService", () => {
 
         mockBookingRepo.findByUidIncludeEventType.mockResolvedValue(mockBooking);
         mockUserRepo.getUserOrganizationAndTeams.mockResolvedValue(mockBookingOwner);
-        mockPermissionCheckService.checkPermission.mockResolvedValue(false);
+        mockUserRepo.isAdminOfTeamOrParentOrg.mockResolvedValue(false);
 
         const result = await service.doesUserIdHaveAccessToBooking({
           userId: 123,
@@ -293,7 +279,7 @@ describe("BookingAccessService", () => {
 
         mockBookingRepo.findByUidIncludeEventType.mockResolvedValue(mockBooking);
         mockUserRepo.getUserOrganizationAndTeams.mockResolvedValue(mockBookingOwner);
-        mockPermissionCheckService.checkPermission
+        mockUserRepo.isAdminOfTeamOrParentOrg
           .mockResolvedValueOnce(false) // Team 300 - no permission
           .mockResolvedValueOnce(true); // Team 400 - has permission
 
@@ -303,18 +289,14 @@ describe("BookingAccessService", () => {
         });
 
         expect(result).toBe(true);
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenCalledTimes(2);
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenNthCalledWith(1, {
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenCalledTimes(2);
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenNthCalledWith(1, {
           userId: 123,
           teamId: 300,
-          permission: "booking.readTeamBookings",
-          fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
         });
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenNthCalledWith(2, {
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenNthCalledWith(2, {
           userId: 123,
           teamId: 400,
-          permission: "booking.readTeamBookings",
-          fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
         });
       });
 
@@ -332,7 +314,7 @@ describe("BookingAccessService", () => {
 
         mockBookingRepo.findByUidIncludeEventType.mockResolvedValue(mockBooking);
         mockUserRepo.getUserOrganizationAndTeams.mockResolvedValue(mockBookingOwner);
-        mockPermissionCheckService.checkPermission.mockResolvedValue(false);
+        mockUserRepo.isAdminOfTeamOrParentOrg.mockResolvedValue(false);
 
         const result = await service.doesUserIdHaveAccessToBooking({
           userId: 123,
@@ -340,7 +322,7 @@ describe("BookingAccessService", () => {
         });
 
         expect(result).toBe(false);
-        expect(mockPermissionCheckService.checkPermission).toHaveBeenCalledTimes(2);
+        expect(mockUserRepo.isAdminOfTeamOrParentOrg).toHaveBeenCalledTimes(2);
       });
     });
   });

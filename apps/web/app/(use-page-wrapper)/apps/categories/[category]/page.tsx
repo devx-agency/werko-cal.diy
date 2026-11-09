@@ -1,11 +1,9 @@
+import { AppCategories } from "@calcom/prisma/enums";
+import { getStaticProps } from "@lib/apps/categories/[category]/getStaticProps";
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-
-import { AppCategories } from "@calcom/prisma/enums";
-
-import { getStaticProps } from "@lib/apps/categories/[category]/getStaticProps";
-
 import CategoryPage from "~/apps/categories/[category]/category-view";
 
 const querySchema = z.object({
@@ -13,7 +11,15 @@ const querySchema = z.object({
 });
 
 async function Page({ params, searchParams }: PageProps) {
-  const parsed = querySchema.safeParse({ ...(await params), ...(await searchParams) });
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  await requireAuthenticatedPage(
+    createLocalPath(
+      `/apps/categories/${encodeURIComponent(`${resolvedParams.category}`)}`,
+      resolvedSearchParams
+    )
+  );
+  const parsed = querySchema.safeParse({ ...resolvedParams, ...resolvedSearchParams });
   if (!parsed.success) {
     redirect("/apps/categories/calendar");
   }

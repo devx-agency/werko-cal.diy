@@ -1,7 +1,12 @@
-import { WEBAPP_URL } from "@calcom/lib/constants";
 import { loadTranslations } from "@calcom/i18n/server";
+import { WEBAPP_URL } from "@calcom/lib/constants";
 import { buildLegacyCtx, decodeParams } from "@lib/buildLegacyCtx";
 import { getServerSideProps } from "@server/lib/[user]/[type]/getServerSideProps";
+import {
+  createLocalPath,
+  requireAuthenticatedPage,
+  requireBookingQueryAccess,
+} from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { generateMeetingMetadata } from "app/_utils";
 import { CustomI18nProvider } from "app/CustomI18nProvider";
@@ -16,7 +21,17 @@ const getData: (ctx: ReturnType<typeof buildLegacyCtx>) => Promise<LegacyPagePro
   withAppDirSsr<LegacyPageProps>(getServerSideProps);
 
 const ServerPage = async ({ params, searchParams }: PageProps): Promise<JSX.Element> => {
-  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), await params, await searchParams);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const decodedParams = decodeParams(resolvedParams);
+  const callbackPath = createLocalPath(
+    `/${encodeURIComponent(`${decodedParams.user}`)}/${encodeURIComponent(`${decodedParams.type}`)}`,
+    resolvedSearchParams
+  );
+  const session = await requireAuthenticatedPage(callbackPath);
+  await requireBookingQueryAccess(resolvedSearchParams, session.user);
+
+  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams);
   const props = await getData(legacyCtx);
 
   const locale = props.eventData?.interfaceLanguage;
@@ -34,7 +49,17 @@ const ServerPage = async ({ params, searchParams }: PageProps): Promise<JSX.Elem
 };
 
 export const generateMetadata = async ({ params, searchParams }: PageProps): Promise<Metadata> => {
-  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), await params, await searchParams);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const decodedParams = decodeParams(resolvedParams);
+  const session = await requireAuthenticatedPage(
+    createLocalPath(
+      `/${encodeURIComponent(`${decodedParams.user}`)}/${encodeURIComponent(`${decodedParams.type}`)}`,
+      resolvedSearchParams
+    )
+  );
+  await requireBookingQueryAccess(resolvedSearchParams, session.user);
+  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams);
   const props = await getData(legacyCtx);
 
   const { booking, isSEOIndexable = true, eventData, isBrandingHidden } = props;
@@ -50,7 +75,6 @@ export const generateMetadata = async ({ params, searchParams }: PageProps): Pro
         username: `${user.username}`,
       })) || [],
   };
-  const decodedParams = decodeParams(await params);
   const metadata = await generateMeetingMetadata(
     meeting,
     (t) => `${rescheduleUid && !!booking ? t("reschedule") : ""} ${title} | ${profileName}`,

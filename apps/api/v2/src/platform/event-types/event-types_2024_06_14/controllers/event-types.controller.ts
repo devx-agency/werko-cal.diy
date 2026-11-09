@@ -25,6 +25,29 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags as DocsTags } from "@nestjs/swagger";
+import { VERSION_2024_06_14_VALUE } from "@/lib/api-versions";
+import {
+  API_KEY_OR_ACCESS_TOKEN_HEADER,
+  OPTIONAL_API_KEY_OR_ACCESS_TOKEN_HEADER,
+  OPTIONAL_X_CAL_CLIENT_ID_HEADER,
+  OPTIONAL_X_CAL_SECRET_KEY_HEADER,
+} from "@/lib/docs/headers";
+import { SYSTEM_ADMIN_ROLE } from "@/lib/roles/constants";
+import {
+  AuthOptionalUser,
+  GetOptionalUser,
+} from "@/modules/auth/decorators/get-optional-user/get-optional-user.decorator";
+import { GetUser } from "@/modules/auth/decorators/get-user/get-user.decorator";
+import { Permissions } from "@/modules/auth/decorators/permissions/permissions.decorator";
+import { Roles } from "@/modules/auth/decorators/roles/roles.decorator";
+import { ApiAuthGuard } from "@/modules/auth/guards/api-auth/api-auth.guard";
+import { OptionalApiAuthGuard } from "@/modules/auth/guards/optional-api-auth/optional-api-auth.guard";
+import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
+import { RolesGuard } from "@/modules/auth/guards/roles/roles.guard";
+import { ApiAuthGuardUser } from "@/modules/auth/strategies/api-auth/api-auth.strategy";
+import { OutputTeamEventTypesResponsePipe } from "@/modules/teams/event-types/pipes/output-team-event-types-response.pipe";
+import type { DatabaseTeamEventType } from "@/modules/teams/event-types/services/output-team-event-types.service";
+import { UserWithProfile } from "@/modules/users/users.repository";
 import { CreateEventTypeOutput_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/outputs/create-event-type.output";
 import { DeleteEventTypeOutput_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/outputs/delete-event-type.output";
 import { GetEventTypeOutput_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/outputs/get-event-type.output";
@@ -35,26 +58,6 @@ import { EventTypesService_2024_06_14 } from "@/platform/event-types/event-types
 import { InputEventTypesService_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/services/input-event-types.service";
 import type { DatabaseEventType } from "@/platform/event-types/event-types_2024_06_14/services/output-event-types.service";
 import { OutputEventTypesService_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/services/output-event-types.service";
-import { VERSION_2024_06_14_VALUE } from "@/lib/api-versions";
-import {
-  API_KEY_OR_ACCESS_TOKEN_HEADER,
-  OPTIONAL_API_KEY_OR_ACCESS_TOKEN_HEADER,
-  OPTIONAL_X_CAL_CLIENT_ID_HEADER,
-  OPTIONAL_X_CAL_SECRET_KEY_HEADER,
-} from "@/lib/docs/headers";
-import {
-  AuthOptionalUser,
-  GetOptionalUser,
-} from "@/modules/auth/decorators/get-optional-user/get-optional-user.decorator";
-import { GetUser } from "@/modules/auth/decorators/get-user/get-user.decorator";
-import { Permissions } from "@/modules/auth/decorators/permissions/permissions.decorator";
-import { ApiAuthGuard } from "@/modules/auth/guards/api-auth/api-auth.guard";
-import { OptionalApiAuthGuard } from "@/modules/auth/guards/optional-api-auth/optional-api-auth.guard";
-import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
-import { ApiAuthGuardUser } from "@/modules/auth/strategies/api-auth/api-auth.strategy";
-import { OutputTeamEventTypesResponsePipe } from "@/modules/teams/event-types/pipes/output-team-event-types-response.pipe";
-import type { DatabaseTeamEventType } from "@/modules/teams/event-types/services/output-team-event-types.service";
-import { UserWithProfile } from "@/modules/users/users.repository";
 
 @Controller({
   path: "/v2/event-types",
@@ -82,7 +85,8 @@ export class EventTypesController_2024_06_14 {
 
   @Post("/")
   @Permissions([EVENT_TYPE_WRITE])
-  @UseGuards(ApiAuthGuard)
+  @Roles(SYSTEM_ADMIN_ROLE)
+  @UseGuards(ApiAuthGuard, RolesGuard)
   @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)
   @ApiOperation({
     summary: "Create an event type",
@@ -180,7 +184,8 @@ export class EventTypesController_2024_06_14 {
 
   @Patch("/:eventTypeId")
   @Permissions([EVENT_TYPE_WRITE])
-  @UseGuards(ApiAuthGuard)
+  @Roles(SYSTEM_ADMIN_ROLE)
+  @UseGuards(ApiAuthGuard, RolesGuard)
   @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -208,7 +213,8 @@ export class EventTypesController_2024_06_14 {
 
   @Delete("/:eventTypeId")
   @Permissions([EVENT_TYPE_WRITE])
-  @UseGuards(ApiAuthGuard)
+  @Roles(SYSTEM_ADMIN_ROLE)
+  @UseGuards(ApiAuthGuard, RolesGuard)
   @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)
   @ApiOperation({
     summary: "Delete an event type",

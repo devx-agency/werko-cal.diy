@@ -1,4 +1,9 @@
-import { CAL_API_VERSION_HEADER, SUCCESS_STATUS, VERSION_2024_08_13 } from "@calcom/platform-constants";
+import {
+  CAL_API_VERSION_HEADER,
+  SUCCESS_STATUS,
+  VERSION_2024_04_15,
+  VERSION_2024_08_13,
+} from "@calcom/platform-constants";
 import type { Booking, PlatformOAuthClient, Team, User } from "@calcom/prisma/client";
 import { INestApplication } from "@nestjs/common";
 import { NestExpressApplication } from "@nestjs/platform-express";
@@ -14,13 +19,13 @@ import { UserRepositoryFixture } from "test/fixtures/repository/users.repository
 import { randomString } from "test/utils/randomString";
 import { AppModule } from "@/app.module";
 import { bootstrap } from "@/bootstrap";
+import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
+import { PrismaModule } from "@/modules/prisma/prisma.module";
+import { UsersModule } from "@/modules/users/users.module";
 import { CalVideoService } from "@/platform/bookings/2024-08-13/services/cal-video.service";
 import { CreateScheduleInput_2024_04_15 } from "@/platform/schedules/schedules_2024_04_15/inputs/create-schedule.input";
 import { SchedulesModule_2024_04_15 } from "@/platform/schedules/schedules_2024_04_15/schedules.module";
 import { SchedulesService_2024_04_15 } from "@/platform/schedules/schedules_2024_04_15/services/schedules.service";
-import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
-import { PrismaModule } from "@/modules/prisma/prisma.module";
-import { UsersModule } from "@/modules/users/users.module";
 
 describe("Bookings Endpoints 2024-08-13", () => {
   describe("Booking access authorization", () => {
@@ -161,6 +166,58 @@ describe("Bookings Endpoints 2024-08-13", () => {
       const client = await oauthClientRepositoryFixture.create(organizationId, data, secret);
       return client;
     }
+
+    describe("Booking API authentication and ownership", () => {
+      it("requires authentication to create bookings through either REST version", async () => {
+        await request(app.getHttpServer())
+          .post("/v2/bookings")
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_04_15)
+          .send({})
+          .expect(401);
+
+        await request(app.getHttpServer())
+          .post("/v2/bookings")
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_08_13)
+          .send({})
+          .expect(401);
+      });
+
+      it("requires authentication and booking access for booking details in either REST version", async () => {
+        await request(app.getHttpServer())
+          .get(`/v2/bookings/${testBooking.uid}`)
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_08_13)
+          .expect(401);
+
+        await request(app.getHttpServer())
+          .get(`/v2/bookings/${testBooking.uid}`)
+          .set("Authorization", `Bearer ${unauthorizedApiKey}`)
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_08_13)
+          .expect(403);
+
+        await request(app.getHttpServer())
+          .get(`/v2/bookings/${testBooking.uid}`)
+          .set("Authorization", `Bearer ${ownerApiKey}`)
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_08_13)
+          .expect(200);
+
+        await request(app.getHttpServer())
+          .get(`/v2/bookings/${testBooking.uid}`)
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_04_15)
+          .expect(401);
+
+        await request(app.getHttpServer())
+          .get(`/v2/bookings/${testBooking.uid}`)
+          .set("Authorization", `Bearer ${unauthorizedApiKey}`)
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_04_15)
+          .expect(403);
+
+        await request(app.getHttpServer())
+          .get(`/v2/bookings/${testBooking.uid}`)
+          .set("Authorization", `Bearer ${ownerApiKey}`)
+          .set(CAL_API_VERSION_HEADER, VERSION_2024_04_15)
+          .expect(200);
+      });
+    });
 
     describe("GET /v2/bookings/:bookingUid/conferencing-sessions - Authorization", () => {
       it("should allow booking organizer to access conferencing sessions", async () => {

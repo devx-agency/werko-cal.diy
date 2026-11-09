@@ -1,12 +1,6 @@
-import { _generateMetadata } from "app/_utils";
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
-
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { APP_NAME } from "@calcom/lib/constants";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
+import { _generateMetadata } from "app/_utils";
 import { PersonalSettingsView } from "~/onboarding/personal/settings/personal-settings-view";
 
 export const generateMetadata = async () => {
@@ -20,15 +14,12 @@ export const generateMetadata = async () => {
 };
 
 const ServerPage = async (props: { searchParams: Promise<{ fromTeamOnboarding?: string }> }) => {
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-
-  if (!session?.user?.id) {
-    return redirect("/auth/login");
-  }
-
+  const searchParams = await props.searchParams;
+  const session = await requireAuthenticatedPage(
+    createLocalPath("/onboarding/personal/settings", searchParams)
+  );
   const userEmail = session.user.email || "";
   const userName = session.user.name || "";
-  const searchParams = await props.searchParams;
   const fromTeamOnboarding = searchParams?.fromTeamOnboarding === "true";
 
   return (

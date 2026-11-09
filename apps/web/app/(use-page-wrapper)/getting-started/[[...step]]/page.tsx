@@ -1,17 +1,13 @@
+import { UserRepository } from "@calcom/features/users/repositories/UserRepository";
+import { APP_NAME } from "@calcom/lib/constants";
+import prisma from "@calcom/prisma";
+import { meRouter } from "@calcom/trpc/server/routers/viewer/me/_router";
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import { createRouterCaller } from "app/_trpc/context";
 import type { PageProps as ServerPageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
-import { UserRepository } from "@calcom/features/users/repositories/UserRepository";
-import { APP_NAME } from "@calcom/lib/constants";
-import prisma from "@calcom/prisma";
-import { meRouter } from "@calcom/trpc/server/routers/viewer/me/_router";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
 import Page from "~/getting-started/[[...step]]/onboarding-view";
 
 export const generateMetadata = async ({ params }: ServerPageProps) => {
@@ -27,11 +23,12 @@ export const generateMetadata = async ({ params }: ServerPageProps) => {
 };
 
 const ServerPage = async ({ params, searchParams }: ServerPageProps) => {
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-
-  if (!session?.user?.id) {
-    return redirect("/auth/login");
-  }
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const step = Array.isArray(resolvedParams.step) ? resolvedParams.step.join("/") : "";
+  const session = await requireAuthenticatedPage(
+    createLocalPath(`/getting-started${step ? `/${step}` : ""}`, resolvedSearchParams)
+  );
 
   const userRepo = new UserRepository(prisma);
   const meCaller = await createRouterCaller(meRouter);

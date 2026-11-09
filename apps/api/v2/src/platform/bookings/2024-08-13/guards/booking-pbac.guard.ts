@@ -1,51 +1,54 @@
-import { ApiAuthGuardUser } from "@/modules/auth/strategies/api-auth/api-auth.strategy";
-import { PrismaReadService } from "@/modules/prisma/prisma-read.service";
+import { BookingAccessService } from "@calcom/platform-libraries";
 import {
-  Injectable,
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
   UnauthorizedException,
-  BadRequestException,
 } from "@nestjs/common";
 import { Request } from "express";
-
-import { BookingAccessService } from "@calcom/platform-libraries";
+import { ApiAuthGuardUser } from "@/modules/auth/strategies/api-auth/api-auth.strategy";
+import { PrismaReadService } from "@/modules/prisma/prisma-read.service";
 
 @Injectable()
 export class BookingPbacGuard implements CanActivate {
   private bookingAccessService: BookingAccessService;
 
   constructor(private readonly prismaReadService: PrismaReadService) {
-    this.bookingAccessService = new BookingAccessService(
-      this.prismaReadService.prisma
-    );
+    this.bookingAccessService = new BookingAccessService(this.prismaReadService.prisma);
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<
-        Request & { user?: ApiAuthGuardUser; pbacAuthorizedRequest?: boolean }
-      >();
+      .getRequest<Request & { user?: ApiAuthGuardUser; pbacAuthorizedRequest?: boolean }>();
     const user = request.user;
-    const bookingUid = request.params.bookingUid;
+    let bookingUid = request.params.bookingUid;
 
     if (!user) {
       throw new UnauthorizedException();
     }
 
-    if (!bookingUid) {
-      throw new BadRequestException(
-        "BookingPbacGuard - bookingUid is required"
-      );
+    if (!bookingUid && request.params.seatUid) {
+      const bookingSeat = await this.prismaReadService.prisma.bookingSeat.findUnique({
+        where: { referenceUid: request.params.seatUid },
+        select: { booking: { select: { uid: true } } },
+      });
+      const seatBookingUid = bookingSeat?.booking.uid;
+      if (seatBookingUid) {
+        bookingUid = seatBookingUid;
+      }
     }
 
-    const hasAccess =
-      await this.bookingAccessService.doesUserIdHaveAccessToBooking({
-        userId: user.id,
-        bookingUid,
-      });
+    if (!bookingUid) {
+      throw new BadRequestException("BookingPbacGuard - bookingUid is required");
+    }
+
+    const hasAccess = await this.bookingAccessService.doesUserIdHaveAccessToBooking({
+      userId: user.id,
+      bookingUid,
+    });
 
     if (!hasAccess) {
       throw new ForbiddenException(

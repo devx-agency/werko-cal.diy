@@ -83,6 +83,105 @@ describe("getServerSession", () => {
       });
     });
 
+    it("rechecks Authentik groups after 15 minutes before returning the session role", async () => {
+      vi.useFakeTimers();
+      const now = new Date("2026-11-04T12:00:00.000Z");
+      vi.setSystemTime(now);
+      vi.stubEnv("AUTHENTIK_CLIENT_ID", "test-client");
+      vi.stubEnv("AUTHENTIK_CLIENT_SECRET", "test-secret");
+      vi.stubEnv("AUTHENTIK_ISSUER", "https://auth.example/application/o/cal");
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              issuer: "https://auth.example/application/o/cal/",
+              userinfo_endpoint: "https://auth.example/application/o/userinfo/",
+              token_endpoint: "https://auth.example/application/o/token/",
+            }),
+            { status: 200 }
+          )
+        )
+        .mockResolvedValueOnce(new Response(JSON.stringify({ groups: ["cal-users"] }), { status: 200 }));
+      setupGetTokenMock(
+        createMockToken({
+          role: "ADMIN",
+          authentikSubject: "auth-sub-1",
+          authentikGroupsVerifiedAt: now.getTime() - 15 * 60 * 1000,
+        })
+      );
+      prismaMock.user.findUnique.mockResolvedValue(createMockUser());
+      prismaMock.account.findUnique.mockResolvedValue({
+        userId: 5,
+        access_token: "current-access-token",
+        refresh_token: "current-refresh-token",
+        expires_at: Math.floor(now.getTime() / 1000) + 3600,
+      } as never);
+
+      try {
+        const session = await getServerSession({ req: createMockRequest() });
+
+        expect(session?.user.role).toBe("USER");
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useRealTimers();
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it("uses the verified Authentik role instead of the local database role", async () => {
+      setupGetTokenMock(
+        createMockToken({
+          role: "ADMIN",
+          authentikSubject: "auth-sub-2",
+          authentikGroupsVerifiedAt: Date.now() - 60_000,
+        })
+      );
+      prismaMock.user.findUnique.mockResolvedValue(createMockUser({ role: "USER" }));
+
+      const session = await getServerSession({ req: createMockRequest() });
+
+      expect(session?.user.role).toBe("ADMIN");
+      expect(prismaMock.account.findUnique).not.toHaveBeenCalled();
+    });
+
+    it("fails closed when Authentik group verification fails", async () => {
+      vi.useFakeTimers();
+      const now = new Date("2026-11-04T12:00:00.000Z");
+      vi.setSystemTime(now);
+      vi.stubEnv("AUTHENTIK_CLIENT_ID", "test-client");
+      vi.stubEnv("AUTHENTIK_CLIENT_SECRET", "test-secret");
+      vi.stubEnv("AUTHENTIK_ISSUER", "https://auth.example/application/o/cal");
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error("provider unavailable"));
+      setupGetTokenMock(
+        createMockToken({
+          role: "ADMIN",
+          authentikSubject: "auth-sub-3",
+          authentikGroupsVerifiedAt: now.getTime() - 15 * 60 * 1000,
+        })
+      );
+      prismaMock.user.findUnique.mockResolvedValue(createMockUser());
+      prismaMock.account.findUnique.mockResolvedValue({
+        userId: 5,
+        access_token: "current-access-token",
+        refresh_token: null,
+        expires_at: Math.floor(now.getTime() / 1000) + 3600,
+      } as never);
+
+      try {
+        const session = await getServerSession({ req: createMockRequest() });
+
+        expect(session?.user.role).toBe("USER");
+      } finally {
+        globalThis.fetch = originalFetch;
+        vi.useRealTimers();
+        vi.unstubAllEnvs();
+      }
+    });
+
     it("returns null when user not found in database", async () => {
       setupGetTokenMock(createMockToken({ sub: "999" }));
       prismaMock.user.findUnique.mockResolvedValue(null);

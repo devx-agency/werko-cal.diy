@@ -1,13 +1,12 @@
 "use client";
 
-import classNames from "classnames";
-import { signOut } from "next-auth/react";
-import { Children, type ReactNode } from "react";
-import { Toaster } from "sonner";
-
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { Button } from "@calcom/ui/components/button";
 import { Logo } from "@calcom/ui/components/logo";
+import { signOutFromCal } from "@calcom/web/modules/auth/signOut";
+import classNames from "classnames";
+import { Children, type ReactNode } from "react";
+import { Toaster } from "sonner";
 
 type OnboardingLayoutProps = {
   userEmail: string;
@@ -20,7 +19,7 @@ export const OnboardingLayout = ({ userEmail, currentStep, totalSteps, children 
   const { t } = useLocale();
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/auth/logout" });
+    signOutFromCal();
   };
 
   // Extract children as array

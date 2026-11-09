@@ -28,6 +28,9 @@ interface MockToken {
   orgAwareUsername: string | null;
   profileId: number | null;
   upId: string;
+  role?: "USER" | "ADMIN";
+  authentikSubject?: string;
+  authentikGroupsVerifiedAt?: number;
   impersonatedBy?: { id: number };
 }
 

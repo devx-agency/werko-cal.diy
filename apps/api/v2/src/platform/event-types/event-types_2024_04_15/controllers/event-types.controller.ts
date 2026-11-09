@@ -24,6 +24,17 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiExcludeController as DocsExcludeController } from "@nestjs/swagger";
+import { VERSION_2024_04_15, VERSION_2024_06_11 } from "@/lib/api-versions";
+import { SYSTEM_ADMIN_ROLE } from "@/lib/roles/constants";
+import { GetUser } from "@/modules/auth/decorators/get-user/get-user.decorator";
+import { Permissions } from "@/modules/auth/decorators/permissions/permissions.decorator";
+import { Roles } from "@/modules/auth/decorators/roles/roles.decorator";
+import { ApiAuthGuard } from "@/modules/auth/guards/api-auth/api-auth.guard";
+import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
+import { RolesGuard } from "@/modules/auth/guards/roles/roles.guard";
+import { OrganizationsRepository } from "@/modules/organizations/index/organizations.repository";
+import { PrismaReadService } from "@/modules/prisma/prisma-read.service";
+import { UserWithProfile } from "@/modules/users/users.repository";
 import { CreateEventTypeInput_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/inputs/create-event-type.input";
 import { EventTypeIdParams_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/inputs/event-type-id.input";
 import { GetPublicEventTypeQueryParams_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/inputs/get-public-event-type-query-params.input";
@@ -42,14 +53,6 @@ import {
 import { GetEventTypesPublicOutput } from "@/platform/event-types/event-types_2024_04_15/outputs/get-event-types-public.output";
 import { UpdateEventTypeOutput } from "@/platform/event-types/event-types_2024_04_15/outputs/update-event-type.output";
 import { EventTypesService_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/services/event-types.service";
-import { VERSION_2024_04_15, VERSION_2024_06_11 } from "@/lib/api-versions";
-import { GetUser } from "@/modules/auth/decorators/get-user/get-user.decorator";
-import { Permissions } from "@/modules/auth/decorators/permissions/permissions.decorator";
-import { ApiAuthGuard } from "@/modules/auth/guards/api-auth/api-auth.guard";
-import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
-import { OrganizationsRepository } from "@/modules/organizations/index/organizations.repository";
-import { PrismaReadService } from "@/modules/prisma/prisma-read.service";
-import { UserWithProfile } from "@/modules/users/users.repository";
 
 @Controller({
   path: "/v2/event-types",
@@ -66,7 +69,8 @@ export class EventTypesController_2024_04_15 {
 
   @Post("/")
   @Permissions([EVENT_TYPE_WRITE])
-  @UseGuards(ApiAuthGuard)
+  @Roles(SYSTEM_ADMIN_ROLE)
+  @UseGuards(ApiAuthGuard, RolesGuard)
   async createEventType(
     @Body() body: CreateEventTypeInput_2024_04_15,
     @GetUser() user: UserWithProfile
@@ -169,7 +173,8 @@ export class EventTypesController_2024_04_15 {
 
   @Patch("/:eventTypeId")
   @Permissions([EVENT_TYPE_WRITE])
-  @UseGuards(ApiAuthGuard)
+  @Roles(SYSTEM_ADMIN_ROLE)
+  @UseGuards(ApiAuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   async updateEventType(
     @Param() params: EventTypeIdParams_2024_04_15,
@@ -187,7 +192,8 @@ export class EventTypesController_2024_04_15 {
 
   @Delete("/:eventTypeId")
   @Permissions([EVENT_TYPE_WRITE])
-  @UseGuards(ApiAuthGuard)
+  @Roles(SYSTEM_ADMIN_ROLE)
+  @UseGuards(ApiAuthGuard, RolesGuard)
   async deleteEventType(
     @Param() params: EventTypeIdParams_2024_04_15,
     @Param("eventTypeId", ParseIntPipe) eventTypeId: number,

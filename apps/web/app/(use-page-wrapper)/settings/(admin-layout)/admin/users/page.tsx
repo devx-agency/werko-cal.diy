@@ -1,18 +1,21 @@
 import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
 import { Button } from "@calcom/ui/components/button";
+import { requireAdminPage } from "app/_lib/pageAuthorization";
 import { _generateMetadata, getTranslate } from "app/_utils";
 import UsersListingView from "~/users/views/users-listing-view";
 
-export const generateMetadata = async () =>
-  await _generateMetadata(
+export const generateMetadata = async () => {
+  return await _generateMetadata(
     (t) => t("users"),
     (t) => t("admin_users_description"),
     undefined,
     undefined,
     "/settings/admin/users"
   );
+};
 
 const Page = async () => {
+  await requireAdminPage("/settings/admin/users");
   const t = await getTranslate();
   return (
     <SettingsHeader

@@ -59,6 +59,8 @@ declare module "next-auth/jwt" {
     upId?: string;
     profileId?: number | null;
     role?: UserPermissionRole | "INACTIVE_ADMIN" | null;
+    authentikSubject?: string;
+    authentikGroupsVerifiedAt?: number;
     inactiveAdminReason?: "both" | "password" | "2fa";
     impersonatedBy?: {
       id: number;

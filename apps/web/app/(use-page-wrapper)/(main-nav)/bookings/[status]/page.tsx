@@ -1,7 +1,6 @@
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { FeaturesRepository } from "@calcom/features/flags/features.repository";
 import { prisma } from "@calcom/prisma";
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { _generateMetadata, getTranslate } from "app/_utils";
 import { ShellMainAppDir } from "app/(use-page-wrapper)/(main-nav)/ShellMainAppDir";
@@ -29,12 +28,8 @@ const Page = async ({ params }: PageProps) => {
   if (!parsed.success) {
     redirect("/bookings/upcoming");
   }
+  const session = await requireAuthenticatedPage(createLocalPath(`/bookings/${parsed.data.status}`));
   const t = await getTranslate();
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-
-  if (!session?.user?.id) {
-    return redirect("/auth/login");
-  }
 
   const userId = session.user.id;
   const featuresRepository = new FeaturesRepository(prisma);

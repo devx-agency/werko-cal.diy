@@ -1,11 +1,5 @@
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import { _generateMetadata, getTranslate } from "app/_utils";
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
-
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
 import OAuthClientsView from "~/settings/developer/oauth-clients-view";
 
 export const generateMetadata = async () =>
@@ -18,12 +12,8 @@ export const generateMetadata = async () =>
   );
 
 const Page = async () => {
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
+  await requireAuthenticatedPage("/settings/developer/oauth");
   const t = await getTranslate();
-
-  if (!session) {
-    redirect("/auth/login?callbackUrl=/settings/developer/oauth");
-  }
 
   return <OAuthClientsView />;
 };

@@ -1,10 +1,5 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
-import { useEffect } from "react";
-
 import { useFlagMap } from "@calcom/features/flags/context/provider";
 import { APP_NAME } from "@calcom/lib/constants";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
@@ -13,6 +8,11 @@ import useEmailVerifyCheck from "@calcom/trpc/react/hooks/useEmailVerifyCheck";
 import { Button } from "@calcom/ui/components/button";
 import { EmptyScreen } from "@calcom/ui/components/empty-screen";
 import { showToast } from "@calcom/ui/components/toast";
+import { signOutFromCal } from "@calcom/web/modules/auth/signOut";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import posthog from "posthog-js";
+import { useEffect } from "react";
 
 const EMAIL_CLIENTS = [
   {
@@ -97,7 +97,7 @@ function VerifyEmailPage() {
                   <Button
                     color="minimal"
                     onClick={() => {
-                      signOut({ callbackUrl: "/signup" });
+                      signOutFromCal("/signup");
                     }}>
                     {t("use_different_email")}
                   </Button>

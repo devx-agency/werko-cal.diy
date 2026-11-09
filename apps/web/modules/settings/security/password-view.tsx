@@ -1,9 +1,5 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-
 import SectionBottomActions from "@calcom/features/settings/SectionBottomActions";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { IdentityProvider } from "@calcom/prisma/enums";
@@ -13,12 +9,13 @@ import { trpc } from "@calcom/trpc/react";
 import classNames from "@calcom/ui/classNames";
 import { Alert } from "@calcom/ui/components/alert";
 import { Button } from "@calcom/ui/components/button";
-import { Form } from "@calcom/ui/components/form";
-import { PasswordField } from "@calcom/ui/components/form";
-import { Select } from "@calcom/ui/components/form";
-import { SettingsToggle } from "@calcom/ui/components/form";
+import { Form, PasswordField, Select, SettingsToggle } from "@calcom/ui/components/form";
 import { SkeletonButton, SkeletonContainer, SkeletonText } from "@calcom/ui/components/skeleton";
 import { showToast } from "@calcom/ui/components/toast";
+import { signOutFromCal } from "@calcom/web/modules/auth/signOut";
+import { useSession } from "next-auth/react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 type ChangePasswordSessionFormValues = {
   oldPassword: string;
@@ -99,7 +96,7 @@ const PasswordView = ({ user }: PasswordViewProps) => {
       so this a workaround to hide the banner after updating the password.
       discussion: https://github.com/nextauthjs/next-auth/discussions/4229
       */
-        signOut({ callbackUrl: "/auth/login" });
+        signOutFromCal("/auth/login");
       }
     },
     onError: (error) => {
@@ -142,7 +139,8 @@ const PasswordView = ({ user }: PasswordViewProps) => {
     value: mins,
   }));
 
-  const isDisabled = formMethods.formState.isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid;
+  const isDisabled =
+    formMethods.formState.isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid;
 
   const passwordMinLength = data?.user.role === "USER" ? 7 : 15;
   const isUser = data?.user.role === "USER";

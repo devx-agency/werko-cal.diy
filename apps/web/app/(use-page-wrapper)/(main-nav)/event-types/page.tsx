@@ -1,9 +1,8 @@
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { checkOnboardingRedirect } from "@calcom/features/auth/lib/onboardingUtils";
 import { getTeamsFiltersFromQuery } from "@calcom/features/filters/lib/getTeamsFiltersFromQuery";
 import type { RouterOutputs } from "@calcom/trpc/react";
 import { eventTypesRouter } from "@calcom/trpc/server/routers/viewer/eventTypes/_router";
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
+import { createLocalPath, requireAdminPage } from "app/_lib/pageAuthorization";
 import { createRouterCaller, getTRPCContext } from "app/_trpc/context";
 import type { PageProps, ReadonlyHeaders, ReadonlyRequestCookies } from "app/_types";
 import { _generateMetadata } from "app/_utils";
@@ -11,7 +10,6 @@ import { unstable_cache } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactElement } from "react";
-
 import { EventTypesWrapper } from "./EventTypesWrapper";
 
 const getCachedEventGroups: (
@@ -47,12 +45,7 @@ const Page = async ({ searchParams }: PageProps): Promise<ReactElement> => {
   const _headers = await headers();
   const _cookies = await cookies();
 
-  const session = await getServerSession({
-    req: buildLegacyRequest(_headers, _cookies),
-  });
-  if (!session?.user?.id) {
-    return redirect("/auth/login");
-  }
+  const session = await requireAdminPage(createLocalPath("/event-types", _searchParams));
 
   // Check if user needs onboarding and redirect before fetching event types data
   // Use organizationId from session profile if available to avoid extra query
@@ -71,13 +64,14 @@ const Page = async ({ searchParams }: PageProps): Promise<ReactElement> => {
   return <EventTypesWrapper userEventGroupsData={userEventGroupsData} user={session.user} />;
 };
 
-export const generateMetadata = async (): Promise<ReturnType<typeof _generateMetadata>> =>
-  await _generateMetadata(
+export const generateMetadata = async (): Promise<ReturnType<typeof _generateMetadata>> => {
+  return await _generateMetadata(
     (t) => t("event_types_page_title"),
     (t) => t("event_types_page_subtitle"),
     undefined,
     undefined,
     "/event-types"
   );
+};
 
 export default Page;

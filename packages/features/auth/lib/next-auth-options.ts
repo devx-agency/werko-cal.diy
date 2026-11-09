@@ -42,14 +42,18 @@ import { calendar_v3 } from "@googleapis/calendar";
 import { waitUntil } from "@vercel/functions";
 import { OAuth2Client } from "googleapis-common";
 import type { Account, AuthOptions, Profile, Session, User } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
 import type { JWT } from "next-auth/jwt";
 import { encode } from "next-auth/jwt";
+import AuthentikProvider from "next-auth/providers/authentik";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import CredentialsProvider from "next-auth/providers/credentials";
 import EmailProvider from "next-auth/providers/email";
 import GoogleProvider from "next-auth/providers/google";
 import type { Provider } from "next-auth/providers/index";
 import { getOrgUsernameFromEmail } from "../signup/utils/getOrgUsernameFromEmail";
+import { AUTHENTIK_CONFIG, getAuthentikConfiguration } from "./authentik";
+import { getAuthentikRoleFromGroups, verifyAuthentikRole } from "./authentikRole";
 import { dub } from "./dub";
 import { ErrorCode } from "./ErrorCode";
 import CalComAdapter from "./next-auth-custom-adapter";
@@ -62,6 +66,8 @@ type UserWithProfiles = NonNullable<
 interface ExtendedOAuthProfile extends Profile {
   email_verified?: boolean; // Google/OIDC standard
   xms_edov?: boolean | string | number; // Azure AD specific
+  preferred_username?: string;
+  groups?: unknown;
 }
 
 // This adapts our internal user model to what NextAuth expects
@@ -356,6 +362,19 @@ if (OUTLOOK_LOGIN_ENABLED && OUTLOOK_CLIENT_ID && OUTLOOK_CLIENT_SECRET) {
   );
 }
 
+if (AUTHENTIK_CONFIG) {
+  providers.push(
+    AuthentikProvider({
+      ...AUTHENTIK_CONFIG,
+      authorization: {
+        params: {
+          scope: "openid profile email offline_access",
+        },
+      },
+    })
+  );
+}
+
 providers.push(
   EmailProvider({
     type: "email",
@@ -370,6 +389,108 @@ function isNumber(n: string) {
 }
 
 const calcomAdapter = CalComAdapter(prisma);
+
+async function signInWithAuthentik(
+  user: User | AdapterUser,
+  profile: Profile | undefined,
+  account: Account | null
+) {
+  if (!account || account.provider !== "authentik" || account.type !== "oauth") {
+    return false;
+  }
+
+  const authentikProfile = profile as ExtendedOAuthProfile | undefined;
+  const email = authentikProfile?.email?.trim().toLowerCase();
+  if (
+    !email ||
+    authentikProfile?.email_verified !== true ||
+    !authentikProfile.sub ||
+    authentikProfile.sub !== account.providerAccountId
+  ) {
+    return "/auth/error?error=unverified-email";
+  }
+
+  const linkedAccount = await prisma.account.findUnique({
+    where: {
+      provider_providerAccountId: {
+        provider: account.provider,
+        providerAccountId: account.providerAccountId,
+      },
+    },
+    select: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          twoFactorEnabled: true,
+          locked: true,
+        },
+      },
+    },
+  });
+
+  if (linkedAccount?.user) {
+    if (linkedAccount.user.locked) return false;
+    return linkedAccount.user.twoFactorEnabled ? loginWithTotp(linkedAccount.user.email) : true;
+  }
+
+  const existingUser = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      twoFactorEnabled: true,
+      locked: true,
+      accounts: {
+        where: { provider: account.provider },
+        select: { providerAccountId: true },
+      },
+    },
+  });
+
+  if (existingUser) {
+    if (!existingUser.emailVerified) return "/auth/error?error=unverified-email";
+    if (existingUser.locked) return false;
+    if (
+      existingUser.accounts.some(
+        (existingAccount) => existingAccount.providerAccountId !== account.providerAccountId
+      )
+    ) {
+      return "/auth/error?error=wrong-provider&provider=CAL";
+    }
+
+    await calcomAdapter.linkAccount(AdapterAccountPresenter.fromCalAccount(account, existingUser.id, email));
+    return existingUser.twoFactorEnabled ? loginWithTotp(existingUser.email) : true;
+  }
+
+  const name =
+    user.name?.trim() ||
+    authentikProfile.name?.trim() ||
+    authentikProfile.preferred_username?.trim() ||
+    email.split("@")[0];
+
+  try {
+    const newUser = await prisma.user.create({
+      data: {
+        username: usernameSlug(name),
+        email,
+        emailVerified: new Date(),
+        name,
+        ...(user.image && { avatarUrl: user.image }),
+        creationSource: CreationSource.WEBAPP,
+      },
+    });
+
+    await calcomAdapter.linkAccount(AdapterAccountPresenter.fromCalAccount(account, newUser.id, email));
+    return newUser.twoFactorEnabled ? loginWithTotp(newUser.email) : true;
+  } catch (error) {
+    log.error("Authentik user creation or account linking failed", {
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return "/auth/error?error=user-creation-error";
+  }
+}
 
 export const getOptions = ({
   getDubId,
@@ -388,7 +509,7 @@ export const getOptions = ({
     // decorate the native JWT encode function
     // Impl. detail: We don't pass through as this function is called with encode/decode functions.
     encode: async ({ token, maxAge, secret }) => {
-      log.debug("jwt:encode", safeStringify({ token, maxAge }));
+      log.debug("jwt:encode", safeStringify({ hasSubject: Boolean(token?.sub), maxAge }));
       if (token?.sub && isNumber(token.sub)) {
         const user = await prisma.user.findFirst({
           where: { id: Number(token.sub) },
@@ -426,12 +547,99 @@ export const getOptions = ({
       user,
       // Available only in the first call once the user signs in. Not available in subsequent calls
       account,
+      profile,
     }) {
-      log.debug("callbacks:jwt", safeStringify({ token, user, account, trigger, session }));
+      log.debug(
+        "callbacks:jwt",
+        safeStringify({
+          provider: account?.provider,
+          accountType: account?.type,
+          userId: user?.id,
+          trigger,
+        })
+      );
+      const revalidateAuthentikRole = async (currentToken: JWT): Promise<JWT> => {
+        const subject = currentToken.authentikSubject;
+        const lastVerifiedAt = currentToken.authentikGroupsVerifiedAt;
+        const now = Date.now();
+        if (
+          !subject ||
+          (typeof lastVerifiedAt === "number" &&
+            Number.isFinite(lastVerifiedAt) &&
+            now >= lastVerifiedAt &&
+            now - lastVerifiedAt < 15 * 60 * 1000)
+        ) {
+          return currentToken;
+        }
+
+        try {
+          const authentikConfig = getAuthentikConfiguration({
+            AUTHENTIK_CLIENT_ID: process.env.AUTHENTIK_CLIENT_ID,
+            AUTHENTIK_CLIENT_SECRET: process.env.AUTHENTIK_CLIENT_SECRET,
+            AUTHENTIK_ISSUER: process.env.AUTHENTIK_ISSUER,
+          });
+          if (!authentikConfig) {
+            throw new Error("Authentik is not configured");
+          }
+
+          const account = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: "authentik",
+                providerAccountId: subject,
+              },
+            },
+            select: {
+              userId: true,
+              access_token: true,
+              refresh_token: true,
+              expires_at: true,
+            },
+          });
+          if (!account || account.userId !== Number(currentToken.id)) {
+            throw new Error("Authentik account is not linked to the session user");
+          }
+
+          const role = await verifyAuthentikRole({
+            ...authentikConfig,
+            accessToken: account.access_token,
+            refreshToken: account.refresh_token,
+            expiresAt: account.expires_at,
+            onTokensRefreshed: async ({ accessToken, refreshToken, expiresAt }) => {
+              await prisma.account.update({
+                where: {
+                  provider_providerAccountId: {
+                    provider: "authentik",
+                    providerAccountId: subject,
+                  },
+                },
+                data: {
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                  expires_at: expiresAt,
+                },
+              });
+            },
+          });
+
+          return {
+            ...currentToken,
+            role,
+            authentikGroupsVerifiedAt: Date.now(),
+          } as JWT;
+        } catch (error) {
+          log.error("Authentik group revalidation failed", {
+            errorName: error instanceof Error ? error.name : "UnknownError",
+          });
+          return { ...currentToken, role: UserPermissionRole.USER } as JWT;
+        }
+      };
+
       // The data available in 'session' depends on what data was supplied in update method call of session
       if (trigger === "update") {
+        const verifiedToken = await revalidateAuthentikRole(token);
         return {
-          ...token,
+          ...verifiedToken,
           profileId: session?.profileId ?? token.profileId ?? null,
           upId: session?.upId ?? token.upId ?? null,
           locale: session?.locale ?? token.locale ?? "en",
@@ -526,7 +734,8 @@ export const getOptions = ({
         } as JWT;
       };
       if (!user) {
-        return await autoMergeIdentities();
+        const mergedToken = await autoMergeIdentities();
+        return token.authentikSubject ? revalidateAuthentikRole(mergedToken) : mergedToken;
       }
       if (!account) {
         return token;
@@ -566,33 +775,45 @@ export const getOptions = ({
       // The arguments above are from the provider so we need to look up the
       // user based on those values in order to construct a JWT.
       if (account.type === "oauth") {
-        log.debug("callbacks:jwt:accountType:oauth", safeStringify({ account }));
+        log.debug("callbacks:jwt:accountType:oauth", { provider: account.provider });
         if (!account.provider || !account.providerAccountId) {
           return { ...token, upId: user.profile?.upId ?? token.upId ?? null } as JWT;
         }
         const idP = getIdentityProvider(account.provider);
 
-        if (!idP) {
+        if (!idP && account.provider !== "authentik") {
           log.warn("callbacks:jwt:accountType:oauth - unknown provider, falling back to auto-merge", {
             provider: account.provider,
           });
           return await autoMergeIdentities();
         }
 
-        const existingUser = await prisma.user.findFirst({
-          where: {
-            AND: [
-              {
-                identityProvider: idP,
-              },
-              {
-                identityProviderId: account.providerAccountId,
-              },
-            ],
-          },
-        });
+        const existingUser =
+          account.provider === "authentik"
+            ? (
+                await prisma.account.findUnique({
+                  where: {
+                    provider_providerAccountId: {
+                      provider: account.provider,
+                      providerAccountId: account.providerAccountId,
+                    },
+                  },
+                  select: { user: true },
+                })
+              )?.user
+            : idP
+              ? await prisma.user.findFirst({
+                  where: {
+                    identityProvider: idP,
+                    identityProviderId: account.providerAccountId,
+                  },
+                })
+              : null;
 
         if (!existingUser) {
+          if (account.provider === "authentik") {
+            throw new Error("Authentik account is not linked to a local user");
+          }
           return await autoMergeIdentities();
         }
 
@@ -741,7 +962,14 @@ export const getOptions = ({
           username: existingUser.username,
           email: existingUser.email,
           avatarUrl: existingUser.avatarUrl,
-          role: existingUser.role,
+          role:
+            account.provider === "authentik"
+              ? getAuthentikRoleFromGroups((profile as ExtendedOAuthProfile | undefined)?.groups)
+              : existingUser.role,
+          ...(account.provider === "authentik" && {
+            authentikSubject: account.providerAccountId,
+            authentikGroupsVerifiedAt: Date.now(),
+          }),
           belongsToActiveTeam: token?.belongsToActiveTeam as boolean,
           impersonatedBy: token.impersonatedBy,
           org: token?.org,
@@ -761,7 +989,10 @@ export const getOptions = ({
       return token;
     },
     async session({ session, token, user }) {
-      log.debug("callbacks:session - Session callback called", safeStringify({ session, token, user }));
+      log.debug("callbacks:session - Session callback called", {
+        userId: token.id,
+        profileId: token.profileId,
+      });
       const hasValidLicense = false;
       const profileId = token.profileId;
       const calendsoSession: Session = {
@@ -798,10 +1029,18 @@ export const getOptions = ({
         account,
       } = params;
 
-      log.debug("callbacks:signin", safeStringify(params));
+      log.debug("callbacks:signin", {
+        provider: account?.provider,
+        accountType: account?.type,
+        userId: user.id,
+        emailDomain: user.email?.split("@")[1],
+      });
 
       if (account?.provider === "email") {
         return true;
+      }
+      if (account?.provider === "authentik") {
+        return signInWithAuthentik(user, profile, account);
       }
       // In this case we've already verified the credentials in the authorize
       // callback so we can sign the user in.
