@@ -1,5 +1,10 @@
 import { MembershipRole } from "@calcom/platform-libraries";
 
+export const ROLES = {
+  admin: "ADMIN",
+  user: "USER",
+} as const;
+
 export const SYSTEM_ADMIN_ROLE = "SYSADMIN";
 export const ORG_ROLES = [
   `ORG_${MembershipRole.OWNER}`,

@@ -1,9 +1,8 @@
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 import { getServerSideProps } from "@lib/reschedule/[uid]/getServerSideProps";
 import { createLocalPath, requireAuthenticatedPage, requireBookingAccess } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import withEmbedSsrAppDir from "app/WithEmbedSSR";
-import { cookies, headers } from "next/headers";
 
 const getEmbedData = withEmbedSsrAppDir(getServerSideProps);
 
@@ -14,7 +13,7 @@ const Page = async ({ params, searchParams }: PageProps) => {
     createLocalPath(`/reschedule/${encodeURIComponent(`${resolvedParams.uid}`)}/embed`, resolvedSearchParams)
   );
   await requireBookingAccess(`${resolvedParams.uid}`, session.user);
-  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams);
+  const legacyCtx = await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams);
   await getEmbedData(legacyCtx);
 
   return null;

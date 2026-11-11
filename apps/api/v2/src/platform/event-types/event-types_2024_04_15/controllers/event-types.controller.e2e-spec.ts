@@ -26,6 +26,7 @@ import { AppModule } from "@/app.module";
 import { bootstrap } from "@/bootstrap";
 import { HttpExceptionFilter } from "@/filters/http-exception.filter";
 import { PrismaExceptionFilter } from "@/filters/prisma-exception.filter";
+import { ROLES } from "@/lib/roles/constants";
 import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
 import { TokensModule } from "@/modules/tokens/tokens.module";
 import { UsersModule } from "@/modules/users/users.module";
@@ -113,7 +114,7 @@ describe("Event types Endpoints", () => {
         email: userEmail,
         name,
         username,
-        role: "ADMIN",
+        role: ROLES.admin,
       });
 
       await app.init();

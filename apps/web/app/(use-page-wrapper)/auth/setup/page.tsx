@@ -1,11 +1,10 @@
 import { withAppDirSsr } from "app/WithAppDirSsr";
 import type { PageProps as ServerPageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
-import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 
 import { getServerSideProps } from "@server/lib/setup/getServerSideProps";
 
@@ -34,7 +33,7 @@ const ServerPage = async ({ params, searchParams: _searchParams }: ServerPagePro
     return redirect(`/auth/setup?step=1`);
   }
 
-  const props = await getData(buildLegacyCtx(await headers(), await cookies(), await params, searchParams));
+  const props = await getData(await buildLegacyCtxFromNextRequest(await params, searchParams));
   return <Setup {...props} />;
 };
 

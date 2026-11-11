@@ -1,9 +1,8 @@
 import { withAppDirSsr } from "app/WithAppDirSsr";
 import type { PageProps as ServerPageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
-import { cookies, headers } from "next/headers";
 
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 
 import { getServerSideProps } from "@server/lib/auth/verify-email-change/getServerSideProps";
 
@@ -23,7 +22,7 @@ export const generateMetadata = async () => {
 const getData = withAppDirSsr<ClientPageProps>(getServerSideProps);
 const ServerPage = async ({ params, searchParams }: ServerPageProps) => {
   const props = await getData(
-    buildLegacyCtx(await headers(), await cookies(), await params, await searchParams)
+    await buildLegacyCtxFromNextRequest(await params, await searchParams)
   );
   return <VerifyEmailChange {...props} />;
 };

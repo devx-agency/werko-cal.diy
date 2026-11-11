@@ -1,10 +1,9 @@
 import { getServerSideProps } from "@lib/apps/installation/[[...step]]/getServerSideProps";
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
 import { withAppDirSsr } from "app/WithAppDirSsr";
-import { cookies, headers } from "next/headers";
 import type { OnboardingPageProps } from "~/apps/installation/[[...step]]/step-view";
 import Page from "~/apps/installation/[[...step]]/step-view";
 
@@ -31,7 +30,7 @@ const ServerPage = async ({ params, searchParams }: PageProps) => {
     createLocalPath(`/apps/installation${step ? `/${step}` : ""}`, resolvedSearchParams)
   );
   const props = await getData(
-    buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams)
+    await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams)
   );
   return <Page {...props} />;
 };

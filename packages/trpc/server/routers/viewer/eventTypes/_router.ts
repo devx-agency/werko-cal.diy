@@ -1,6 +1,6 @@
 import { logP } from "@calcom/lib/perf";
 import { z } from "zod";
-import { authedAdminProcedure } from "../../../procedures/authedProcedure";
+import authedProcedure, { authedAdminProcedure } from "../../../procedures/authedProcedure";
 import { router } from "../../../trpc";
 import { ZDeleteInputSchema } from "./delete.schema";
 import { ZExportHostsForWeightsInputSchema } from "./exportHostsForWeights.schema";
@@ -87,7 +87,7 @@ export const eventTypesRouter = router({
     });
   }),
 
-  listWithTeam: authedAdminProcedure.query(async ({ ctx }) => {
+  listWithTeam: authedProcedure.query(async ({ ctx }) => {
     const { listWithTeamHandler } = await import("./listWithTeam.handler");
 
     return listWithTeamHandler({
@@ -106,7 +106,7 @@ export const eventTypesRouter = router({
     });
   }),
 
-  bulkEventFetch: authedAdminProcedure.query(async ({ ctx }) => {
+  bulkEventFetch: authedProcedure.query(async ({ ctx }) => {
     const { bulkEventFetchHandler } = await import("./bulkEventFetch.handler");
 
     return bulkEventFetchHandler({

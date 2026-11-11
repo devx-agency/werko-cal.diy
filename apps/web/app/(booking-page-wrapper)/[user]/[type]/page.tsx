@@ -1,6 +1,6 @@
 import { loadTranslations } from "@calcom/i18n/server";
 import { WEBAPP_URL } from "@calcom/lib/constants";
-import { buildLegacyCtx, decodeParams } from "@lib/buildLegacyCtx";
+import { buildLegacyCtx, buildLegacyCtxFromNextRequest, decodeParams } from "@lib/buildLegacyCtx";
 import { getServerSideProps } from "@server/lib/[user]/[type]/getServerSideProps";
 import {
   createLocalPath,
@@ -12,7 +12,6 @@ import { generateMeetingMetadata } from "app/_utils";
 import { CustomI18nProvider } from "app/CustomI18nProvider";
 import { withAppDirSsr } from "app/WithAppDirSsr";
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
 import type React from "react";
 import type { PageProps as LegacyPageProps } from "~/users/views/users-type-public-view";
 import LegacyPage from "~/users/views/users-type-public-view";
@@ -31,7 +30,7 @@ const ServerPage = async ({ params, searchParams }: PageProps): Promise<JSX.Elem
   const session = await requireAuthenticatedPage(callbackPath);
   await requireBookingQueryAccess(resolvedSearchParams, session.user);
 
-  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams);
+  const legacyCtx = await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams);
   const props = await getData(legacyCtx);
 
   const locale = props.eventData?.interfaceLanguage;
@@ -59,7 +58,7 @@ export const generateMetadata = async ({ params, searchParams }: PageProps): Pro
     )
   );
   await requireBookingQueryAccess(resolvedSearchParams, session.user);
-  const legacyCtx = buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams);
+  const legacyCtx = await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams);
   const props = await getData(legacyCtx);
 
   const { booking, isSEOIndexable = true, eventData, isBrandingHidden } = props;

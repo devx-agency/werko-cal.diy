@@ -1,5 +1,5 @@
 import { loadTranslations } from "@calcom/i18n/server";
-import { buildLegacyCtx, decodeParams } from "@lib/buildLegacyCtx";
+import { buildLegacyCtx, buildLegacyCtxFromNextRequest, decodeParams } from "@lib/buildLegacyCtx";
 import { getServerSideProps } from "@server/lib/[user]/[type]/getServerSideProps";
 import {
   createLocalPath,
@@ -9,7 +9,6 @@ import {
 import type { PageProps as ServerPageProps } from "app/_types";
 import { CustomI18nProvider } from "app/CustomI18nProvider";
 import withEmbedSsrAppDir from "app/WithEmbedSSR";
-import { cookies, headers } from "next/headers";
 import TypePage, { type PageProps as ClientPageProps } from "~/users/views/users-type-public-view";
 
 export const generateMetadata = async () => {
@@ -34,7 +33,7 @@ const ServerPage = async ({ params, searchParams }: ServerPageProps) => {
     )
   );
   await requireBookingQueryAccess(resolvedSearchParams, session.user);
-  const context = buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams);
+  const context = await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams);
   const props = await getData(context);
 
   const locale = props.eventData?.interfaceLanguage;

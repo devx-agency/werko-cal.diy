@@ -1,9 +1,8 @@
 import { getServerSideProps } from "@lib/apps/categories/getServerSideProps";
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { withAppDirSsr } from "app/WithAppDirSsr";
-import { cookies, headers } from "next/headers";
 import Page from "~/apps/categories/categories-view";
 
 const getData = withAppDirSsr(getServerSideProps);
@@ -13,7 +12,7 @@ async function ServerPage({ params, searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   await requireAuthenticatedPage(createLocalPath("/apps/categories", resolvedSearchParams));
   const props = await getData(
-    buildLegacyCtx(await headers(), await cookies(), resolvedParams, resolvedSearchParams)
+    await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams)
   );
 
   return <Page {...props} />;

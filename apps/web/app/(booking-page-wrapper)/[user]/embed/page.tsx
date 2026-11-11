@@ -1,8 +1,7 @@
 import withEmbedSsrAppDir from "app/WithEmbedSSR";
 import type { PageProps as ServerPageProps } from "app/_types";
-import { cookies, headers } from "next/headers";
 
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 
 import { getServerSideProps } from "@server/lib/[user]/getServerSideProps";
 
@@ -20,7 +19,7 @@ export const generateMetadata = async () => {
 const getData = withEmbedSsrAppDir<ClientPageProps>(getServerSideProps);
 
 const ServerPage = async ({ params, searchParams }: ServerPageProps) => {
-  const context = buildLegacyCtx(await headers(), await cookies(), await params, await searchParams);
+  const context = await buildLegacyCtxFromNextRequest(await params, await searchParams);
   const props = await getData(context);
   return <User {...props} />;
 };

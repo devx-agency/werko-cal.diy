@@ -1,7 +1,6 @@
-import type { SearchParams } from "app/_types";
-import { type Params } from "app/_types";
-import type { ReadonlyHeaders, ReadonlyRequestCookies } from "app/_types";
+import type { Params, ReadonlyHeaders, ReadonlyRequestCookies, SearchParams } from "app/_types";
 import type { GetServerSidePropsContext, NextApiRequest } from "next";
+import { cookies, headers } from "next/headers";
 
 const createProxifiedObject = (object: Record<string, string>) =>
   new Proxy(object, {
@@ -71,4 +70,17 @@ export const buildLegacyCtx = (
       },
     }),
   } as unknown as GetServerSidePropsContext;
+};
+
+export const buildLegacyCtxFromNextRequest = async (
+  params: Params | Promise<Params>,
+  searchParams: SearchParams | Promise<SearchParams>,
+  requestHeaders?: ReadonlyHeaders
+): Promise<GetServerSidePropsContext> => {
+  const legacyHeaders = requestHeaders ?? (await headers());
+  const requestCookies = await cookies();
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+
+  return buildLegacyCtx(legacyHeaders, requestCookies, resolvedParams, resolvedSearchParams);
 };

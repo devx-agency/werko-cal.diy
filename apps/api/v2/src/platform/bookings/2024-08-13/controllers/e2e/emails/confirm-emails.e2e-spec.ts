@@ -30,6 +30,7 @@ import { UserRepositoryFixture } from "test/fixtures/repository/users.repository
 import { randomString } from "test/utils/randomString";
 import { AppModule } from "@/app.module";
 import { bootstrap } from "@/bootstrap";
+import { ROLES } from "@/lib/roles/constants";
 import { CreateBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/create-booking.output";
 import { RescheduleBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/reschedule-booking.output";
 import { CreateScheduleInput_2024_04_15 } from "@/platform/schedules/schedules_2024_04_15/inputs/create-schedule.input";
@@ -126,7 +127,7 @@ describe("Bookings Endpoints 2024-08-13 confirm emails", () => {
           id: organization.id,
         },
       },
-      role: "ADMIN",
+      role: ROLES.admin,
     });
 
     app = moduleRef.createNestApplication();

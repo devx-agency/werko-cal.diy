@@ -41,6 +41,7 @@ import { AppModule } from "@/app.module";
 import { bootstrap } from "@/bootstrap";
 import { HttpExceptionFilter } from "@/filters/http-exception.filter";
 import { PrismaExceptionFilter } from "@/filters/prisma-exception.filter";
+import { ROLES } from "@/lib/roles/constants";
 import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
 import { TokensModule } from "@/modules/tokens/tokens.module";
 import { UsersModule } from "@/modules/users/users.module";
@@ -207,7 +208,7 @@ describe("Event types Endpoints", () => {
         email: userEmail,
         name,
         username,
-        role: "ADMIN",
+        role: ROLES.admin,
       });
       apiKeysRepositoryFixture = new ApiKeysRepositoryFixture(moduleRef);
       const { keyString } = await apiKeysRepositoryFixture.createApiKey(user.id, null);
@@ -216,7 +217,7 @@ describe("Event types Endpoints", () => {
       systemAdminUser = await userRepositoryFixture.create({
         email: `event-types-2024-06-14-system-admin-${randomString()}@api.com`,
         username: `event-types-2024-06-14-system-admin-${randomString()}`,
-        role: "ADMIN",
+        role: ROLES.admin,
       });
       const { keyString: adminKeyString } = await apiKeysRepositoryFixture.createApiKey(
         systemAdminUser.id,

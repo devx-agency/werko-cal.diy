@@ -161,8 +161,7 @@ export class BookingsController_2024_08_13 {
   }
 
   @Get("/by-seat/:seatUid")
-  @Permissions([BOOKING_READ])
-  @UseGuards(ApiAuthGuard, BookingPbacGuard)
+  @UseGuards(OptionalApiAuthGuard)
   @ApiHeader(OPTIONAL_X_CAL_CLIENT_ID_HEADER)
   @ApiHeader(OPTIONAL_X_CAL_SECRET_KEY_HEADER)
   @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)

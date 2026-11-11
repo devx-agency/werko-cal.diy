@@ -25,9 +25,11 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   };
 
   let totpEmail = null;
+  let totpToken = null;
   if (context.query.totp) {
     try {
-      const decryptedJwt = await verifyJwt(context.query.totp as string);
+      totpToken = context.query.totp as string;
+      const decryptedJwt = await verifyJwt(totpToken);
       if (decryptedJwt.payload) {
         totpEmail = decryptedJwt.payload.email as string;
       } else {
@@ -93,6 +95,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       isOutlookLoginEnabled: false,
       isAuthentikLoginEnabled: IS_AUTHENTIK_LOGIN_ENABLED,
       totpEmail,
+      totpToken,
     },
   };
 }
