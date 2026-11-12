@@ -1,14 +1,13 @@
 import { withAppDirSsr } from "app/WithAppDirSsr";
 import type { PageProps as ServerPageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
-import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import { BookingRepository } from "@calcom/features/bookings/repositories/BookingRepository";
 import { prisma } from "@calcom/prisma";
 
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
 import { getServerSideProps } from "@lib/video/meeting-not-started/[uid]/getServerSideProps";
 
 import type { PageProps as ClientPageProps } from "~/videos/views/videos-meeting-not-started-single-view";
@@ -40,7 +39,7 @@ export const generateMetadata = async ({ params }: ServerPageProps) => {
 const getData = withAppDirSsr<ClientPageProps>(getServerSideProps);
 
 const ServerPage = async ({ params, searchParams }: ServerPageProps) => {
-  const context = buildLegacyCtx(await headers(), await cookies(), await params, await searchParams);
+  const context = await buildLegacyCtxFromNextRequest(await params, await searchParams);
 
   const props = await getData(context);
   return <MeetingNotStarted {...props} />;

@@ -1,7 +1,9 @@
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { sessionStorage } from "@calcom/lib/webstorage";
+import { UserPermissionRole } from "@calcom/prisma/enums";
 import { trpc } from "@calcom/trpc/react";
 import { showToast } from "@calcom/ui/components/toast";
 import { setShowWelcomeToCalcomModalFlag } from "@calcom/web/modules/shell/hooks/useWelcomeToCalcomModal";
@@ -30,6 +32,7 @@ const DEFAULT_EVENT_TYPES = [
 
 export const useSubmitPersonalOnboarding = () => {
   const router = useRouter();
+  const { data: session } = useSession();
   const { t } = useLocale();
   const utils = trpc.useUtils();
 
@@ -58,10 +61,19 @@ export const useSubmitPersonalOnboarding = () => {
 
       await utils.viewer.me.get.refetch();
 
+      const isAdmin = session?.user.role === UserPermissionRole.ADMIN;
       const redirectUrl = localStorage.getItem(ONBOARDING_REDIRECT_KEY);
       if (redirectUrl) {
         localStorage.removeItem(ONBOARDING_REDIRECT_KEY);
-        router.push(redirectUrl);
+        const redirectPath = new URL(redirectUrl, window.location.origin).pathname;
+        const isAdminOnlyPath =
+          redirectPath === "/event-types" || redirectPath.startsWith("/event-types/");
+        router.push(!isAdmin && isAdminOnlyPath ? "/" : redirectUrl);
+        return;
+      }
+
+      if (!isAdmin) {
+        router.push("/");
         return;
       }
 

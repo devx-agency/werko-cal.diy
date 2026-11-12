@@ -1,14 +1,8 @@
-import { _generateMetadata } from "app/_utils";
-import { unstable_cache } from "next/cache";
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
-
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { PrismaApiKeyRepository } from "@calcom/features/api-keys-legacy/api-keys/repositories/PrismaApiKeyRepository";
 import { APP_NAME } from "@calcom/lib/constants";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
+import { _generateMetadata } from "app/_utils";
+import { unstable_cache } from "next/cache";
 import ApiKeysView from "~/settings/developer/api-keys-view";
 
 export const generateMetadata = async () =>
@@ -30,12 +24,7 @@ const getCachedApiKeys = unstable_cache(
 );
 
 const Page = async () => {
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-
-  if (!session) {
-    redirect("/auth/login?callbackUrl=/settings/developer/api-keys");
-  }
-
+  const session = await requireAuthenticatedPage("/settings/developer/api-keys");
   const userId = session.user.id;
   const apiKeys = await getCachedApiKeys(userId);
 

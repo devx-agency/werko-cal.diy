@@ -6,6 +6,7 @@ import { EventTypeRepository } from "@calcom/features/eventtypes/repositories/ev
 import { FeaturesRepository } from "@calcom/features/flags/features.repository";
 import { checkRateLimitAndThrowError } from "@calcom/lib/checkRateLimitAndThrowError";
 import getIP from "@calcom/lib/getIP";
+import { HttpError } from "@calcom/lib/http-error";
 import { checkCfTurnstileToken } from "@calcom/lib/server/checkCfTurnstileToken";
 import { defaultResponder } from "@calcom/lib/server/defaultResponder";
 import { piiHasher } from "@calcom/lib/server/PiiHasher";
@@ -15,6 +16,11 @@ import { CreationSource } from "@calcom/prisma/enums";
 import type { NextApiRequest } from "next";
 
 async function handler(req: NextApiRequest & { userId?: number; traceContext: TraceContext }) {
+  const session = await getServerSession({ req });
+  if (!session?.user?.id) {
+    throw new HttpError({ statusCode: 401, message: "You must be logged in to create a booking" });
+  }
+
   const userIp = getIP(req);
 
   if (process.env.NEXT_PUBLIC_CLOUDFLARE_USE_TURNSTILE_IN_BOOKER === "1") {
@@ -39,7 +45,6 @@ async function handler(req: NextApiRequest & { userId?: number; traceContext: Tr
     identifier: `createBooking:${piiHasher.hash(userIp)}`,
   });
 
-  const session = await getServerSession({ req });
   /* To mimic API behavior and comply with types */
   req.body = {
     ...req.body,
@@ -50,7 +55,7 @@ async function handler(req: NextApiRequest & { userId?: number; traceContext: Tr
   const booking = await regularBookingService.createBooking({
     bookingData: req.body,
     bookingMeta: {
-      userId: session?.user?.id || -1,
+      userId: session.user.id,
       hostname: req.headers.host || "",
       forcedSlug: req.headers["x-cal-force-slug"] as string | undefined,
       traceContext: req.traceContext,

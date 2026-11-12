@@ -1,8 +1,6 @@
-import { _generateMetadata } from "app/_utils";
-import { getTranslate } from "app/_utils";
-
 import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
-
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
+import { _generateMetadata, getTranslate } from "app/_utils";
 import PasswordViewWrapper from "~/settings/security/password-view";
 
 export const generateMetadata = async () =>
@@ -15,6 +13,7 @@ export const generateMetadata = async () =>
   );
 
 const Page = async () => {
+  await requireAuthenticatedPage("/settings/security/password");
   const t = await getTranslate();
 
   return (

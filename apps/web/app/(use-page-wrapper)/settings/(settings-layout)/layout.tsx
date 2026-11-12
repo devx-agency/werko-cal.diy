@@ -9,7 +9,7 @@ export default async function SettingsLayoutAppDir(props: SettingsLayoutProps) {
   const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
   const userId = session?.user?.id;
   if (!userId) {
-    return redirect("/auth/login");
+    return props.children;
   }
 
   return (

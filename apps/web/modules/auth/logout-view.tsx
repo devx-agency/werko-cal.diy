@@ -1,16 +1,13 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import type { ParsedUrlQuery } from "node:querystring";
-import { useEffect, useState } from "react";
-
 import { WEBSITE_URL } from "@calcom/lib/constants";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { Button } from "@calcom/ui/components/button";
-import { CheckIcon } from "@coss/ui/icons";
-
 import AuthContainer from "@components/ui/AuthContainer";
+import { CheckIcon } from "@coss/ui/icons";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export type PageProps = {
   query: ParsedUrlQuery;
@@ -18,8 +15,6 @@ export type PageProps = {
 
 export function Logout(props: PageProps) {
   const [btnLoading, setBtnLoading] = useState<boolean>(false);
-  const { status } = useSession();
-  if (status === "authenticated") signOut({ redirect: false });
   const router = useRouter();
   useEffect(() => {
     if (props.query?.survey === "true") {
@@ -52,6 +47,9 @@ export function Logout(props: PageProps) {
           </h3>
           <div className="mt-2">
             <p className="text-subtle text-sm">{t(message())}</p>
+            {props.query?.authentikLogout === "failed" && (
+              <p className="mt-2 text-sm text-red-600">{t("authentik_logout_failed")}</p>
+            )}
           </div>
         </div>
       </div>

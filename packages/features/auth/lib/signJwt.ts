@@ -2,7 +2,11 @@ import { SignJWT } from "jose";
 
 import { WEBSITE_URL } from "@calcom/lib/constants";
 
-const signJwt = async (payload: { email: string }) => {
+const signJwt = async (payload: {
+  email: string;
+  authentikSubject?: string;
+  authentikUserId?: number;
+}) => {
   const secret = new TextEncoder().encode(process.env.CALENDSO_ENCRYPTION_KEY);
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })

@@ -1,9 +1,9 @@
 import { APP_NAME } from "@calcom/lib/constants";
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
+import { createLocalPath, requireAuthenticatedPage, requireBookingAccess } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
 import { withAppDirSsr } from "app/WithAppDirSsr";
-import { cookies, headers } from "next/headers";
 import PaymentPage from "./PaymentPage";
 
 type PaymentPageProps = {
@@ -45,8 +45,14 @@ type PaymentPageProps = {
 };
 
 export const generateMetadata = async ({ params, searchParams }: PageProps) => {
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const session = await requireAuthenticatedPage(
+    createLocalPath(`/payment/${encodeURIComponent(`${resolvedParams.uid}`)}`, resolvedSearchParams)
+  );
+  await requireBookingAccess(`${resolvedParams.uid}`, session.user);
   const props = await getData(
-    buildLegacyCtx(await headers(), await cookies(), await params, await searchParams)
+    await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams)
   );
   const eventName = props.booking.title;
   return await _generateMetadata(
@@ -54,7 +60,7 @@ export const generateMetadata = async ({ params, searchParams }: PageProps) => {
     () => "",
     undefined,
     undefined,
-    `/payment/${(await params).uid}`
+    `/payment/${resolvedParams.uid}`
   );
 };
 
@@ -86,8 +92,14 @@ const getData = withAppDirSsr<PaymentPageProps>(async () => ({
 }));
 
 const ServerPage = async ({ params, searchParams }: PageProps) => {
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const session = await requireAuthenticatedPage(
+    createLocalPath(`/payment/${encodeURIComponent(`${resolvedParams.uid}`)}`, resolvedSearchParams)
+  );
+  await requireBookingAccess(`${resolvedParams.uid}`, session.user);
   const props = await getData(
-    buildLegacyCtx(await headers(), await cookies(), await params, await searchParams)
+    await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams)
   );
 
   return <PaymentPage {...props} />;

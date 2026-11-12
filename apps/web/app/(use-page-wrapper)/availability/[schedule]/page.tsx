@@ -1,12 +1,11 @@
+import { availabilityRouter } from "@calcom/trpc/server/routers/viewer/availability/_router";
+import { travelSchedulesRouter } from "@calcom/trpc/server/routers/viewer/travelSchedules/_router";
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import { createRouterCaller } from "app/_trpc/context";
 import type { PageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-
-import { availabilityRouter } from "@calcom/trpc/server/routers/viewer/availability/_router";
-import { travelSchedulesRouter } from "@calcom/trpc/server/routers/viewer/travelSchedules/_router";
-
 import { AvailabilitySettingsWebWrapper } from "~/availability/[schedule]/schedule-view";
 
 const querySchema = z.object({
@@ -28,8 +27,13 @@ export const generateMetadata = async () => {
   );
 };
 
-const Page = async ({ params }: PageProps) => {
-  const parsed = querySchema.safeParse(await params);
+const Page = async ({ params, searchParams }: PageProps) => {
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  await requireAuthenticatedPage(
+    createLocalPath(`/availability/${encodeURIComponent(`${resolvedParams.schedule}`)}`, resolvedSearchParams)
+  );
+  const parsed = querySchema.safeParse(resolvedParams);
   if (!parsed.success) {
     notFound();
   }

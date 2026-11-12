@@ -2,6 +2,7 @@ import { sha256Hash, isApiKey, stripApiKey } from "@/lib/api-key";
 import { AuthMethods } from "@/lib/enums/auth-methods";
 import { isOriginAllowed } from "@/lib/is-origin-allowed/is-origin-allowed";
 import { BaseStrategy } from "@/lib/passport/strategies/types";
+import { ROLES } from "@/lib/roles/constants";
 import { ApiKeysRepository } from "@/modules/api-keys/api-keys-repository";
 import { MembershipsRepository } from "@/modules/memberships/memberships.repository";
 import { OAuthClientRepository } from "@/modules/oauth-clients/oauth-client.repository";
@@ -159,7 +160,7 @@ export class ApiAuthStrategy extends PassportStrategy(BaseStrategy, "api-auth") 
   getSuccessUser(user: UserWithProfile): ApiAuthGuardUser {
     return {
       ...user,
-      isSystemAdmin: user.role === "ADMIN",
+      isSystemAdmin: user.role === ROLES.admin,
     };
   }
 

@@ -1,7 +1,6 @@
 import { MembershipRole } from "@calcom/prisma/enums";
 import authedProcedure from "../../../procedures/authedProcedure";
 import { createTeamPbacProcedure } from "../../../procedures/pbacProcedures";
-import publicProcedure from "../../../procedures/publicProcedure";
 import { router } from "../../../trpc";
 import { ZAddGuestsInputSchema } from "./addGuests.schema";
 import { ZConfirmInputSchema } from "./confirm.schema";
@@ -88,7 +87,7 @@ export const bookingsRouter = router({
     });
   }),
 
-  find: publicProcedure.input(ZFindInputSchema).query(async ({ input, ctx }) => {
+  find: authedProcedure.input(ZFindInputSchema).query(async ({ input, ctx }) => {
     const { getHandler } = await import("./find.handler");
 
     return getHandler({

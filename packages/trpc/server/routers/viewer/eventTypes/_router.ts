@@ -1,28 +1,24 @@
-import { z } from "zod";
-
 import { logP } from "@calcom/lib/perf";
-import { MembershipRole } from "@calcom/prisma/enums";
-
-import authedProcedure from "../../../procedures/authedProcedure";
+import { z } from "zod";
+import authedProcedure, { authedAdminProcedure } from "../../../procedures/authedProcedure";
 import { router } from "../../../trpc";
 import { ZDeleteInputSchema } from "./delete.schema";
+import { ZExportHostsForWeightsInputSchema } from "./exportHostsForWeights.schema";
 import { ZGetActiveOnOptionsSchema } from "./getActiveOnOptions.schema";
 import { ZEventTypeInputSchema, ZGetEventTypesFromGroupSchema } from "./getByViewer.schema";
+import { ZGetChildrenForAssignmentInputSchema } from "./getChildrenForAssignment.schema";
 import { ZGetHashedLinkInputSchema } from "./getHashedLink.schema";
 import { ZGetHashedLinksInputSchema } from "./getHashedLinks.schema";
-import { ZGetChildrenForAssignmentInputSchema } from "./getChildrenForAssignment.schema";
-import { ZExportHostsForWeightsInputSchema } from "./exportHostsForWeights.schema";
 import { ZGetHostsForAssignmentInputSchema } from "./getHostsForAssignment.schema";
 import { ZGetHostsForAvailabilityInputSchema } from "./getHostsForAvailability.schema";
 import { ZGetHostsWithLocationOptionsInputSchema } from "./getHostsWithLocationOptions.schema";
 import { ZMassApplyHostLocationInputSchema } from "./massApplyHostLocation.schema";
 import { get } from "./procedures/get";
 import { ZSearchTeamMembersInputSchema } from "./searchTeamMembers.schema";
-import { createEventPbacProcedure } from "./util";
 
 export const eventTypesRouter = router({
   // REVIEW: What should we name this procedure?
-  getByViewer: authedProcedure.input(ZEventTypeInputSchema).query(async ({ ctx, input }) => {
+  getByViewer: authedAdminProcedure.input(ZEventTypeInputSchema).query(async ({ ctx, input }) => {
     const { getByViewerHandler } = await import("./getByViewer.handler");
 
     const timer = logP(`getByViewer(${ctx.user.id})`);
@@ -36,7 +32,7 @@ export const eventTypesRouter = router({
 
     return result;
   }),
-  getUserEventGroups: authedProcedure.input(ZEventTypeInputSchema).query(async ({ ctx, input }) => {
+  getUserEventGroups: authedAdminProcedure.input(ZEventTypeInputSchema).query(async ({ ctx, input }) => {
     const { getUserEventGroups } = await import("./getUserEventGroups.handler");
 
     const timer = logP(`getUserEventGroups(${ctx.user.id})`);
@@ -51,7 +47,7 @@ export const eventTypesRouter = router({
     return result;
   }),
 
-  getEventTypesFromGroup: authedProcedure
+  getEventTypesFromGroup: authedAdminProcedure
     .input(ZGetEventTypesFromGroupSchema)
     .query(async ({ ctx, input }) => {
       const { getEventTypesFromGroup } = await import("./getEventTypesFromGroup.handler");
@@ -68,7 +64,7 @@ export const eventTypesRouter = router({
       return result;
     }),
 
-  getActiveOnOptions: authedProcedure.input(ZGetActiveOnOptionsSchema).query(async ({ ctx, input }) => {
+  getActiveOnOptions: authedAdminProcedure.input(ZGetActiveOnOptionsSchema).query(async ({ ctx, input }) => {
     const { getActiveOnOptions } = await import("./getActiveOnOptions.handler");
 
     const timer = logP(`getActiveOnOptions(${ctx.user.id})`);
@@ -83,7 +79,7 @@ export const eventTypesRouter = router({
     return result;
   }),
 
-  list: authedProcedure.query(async ({ ctx }) => {
+  list: authedAdminProcedure.query(async ({ ctx }) => {
     const { listHandler } = await import("./list.handler");
 
     return listHandler({
@@ -101,16 +97,14 @@ export const eventTypesRouter = router({
 
   get,
 
-  delete: createEventPbacProcedure("eventType.delete", [MembershipRole.ADMIN, MembershipRole.OWNER])
-    .input(ZDeleteInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { deleteHandler } = await import("./delete.handler");
+  delete: authedAdminProcedure.input(ZDeleteInputSchema).mutation(async ({ ctx, input }) => {
+    const { deleteHandler } = await import("./delete.handler");
 
-      return deleteHandler({
-        ctx,
-        input,
-      });
-    }),
+    return deleteHandler({
+      ctx,
+      input,
+    });
+  }),
 
   bulkEventFetch: authedProcedure.query(async ({ ctx }) => {
     const { bulkEventFetchHandler } = await import("./bulkEventFetch.handler");
@@ -120,7 +114,7 @@ export const eventTypesRouter = router({
     });
   }),
 
-  bulkUpdateToDefaultLocation: authedProcedure
+  bulkUpdateToDefaultLocation: authedAdminProcedure
     .input(
       z.object({
         eventTypeIds: z.array(z.number()),
@@ -135,7 +129,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  getHashedLink: authedProcedure.input(ZGetHashedLinkInputSchema).query(async ({ ctx, input }) => {
+  getHashedLink: authedAdminProcedure.input(ZGetHashedLinkInputSchema).query(async ({ ctx, input }) => {
     const { getHashedLinkHandler } = await import("./getHashedLink.handler");
 
     return getHashedLinkHandler({
@@ -144,7 +138,7 @@ export const eventTypesRouter = router({
     });
   }),
 
-  getHashedLinks: authedProcedure.input(ZGetHashedLinksInputSchema).query(async ({ ctx, input }) => {
+  getHashedLinks: authedAdminProcedure.input(ZGetHashedLinksInputSchema).query(async ({ ctx, input }) => {
     const { getHashedLinksHandler } = await import("./getHashedLinks.handler");
 
     return getHashedLinksHandler({
@@ -153,10 +147,7 @@ export const eventTypesRouter = router({
     });
   }),
 
-  getHostsForAvailability: createEventPbacProcedure("eventType.update", [
-    MembershipRole.ADMIN,
-    MembershipRole.OWNER,
-  ])
+  getHostsForAvailability: authedAdminProcedure
     .input(ZGetHostsForAvailabilityInputSchema)
     .query(async ({ ctx, input }) => {
       const { getHostsForAvailabilityHandler } = await import("./getHostsForAvailability.handler");
@@ -167,10 +158,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  getHostsForAssignment: createEventPbacProcedure("eventType.update", [
-    MembershipRole.ADMIN,
-    MembershipRole.OWNER,
-  ])
+  getHostsForAssignment: authedAdminProcedure
     .input(ZGetHostsForAssignmentInputSchema)
     .query(async ({ ctx, input }) => {
       const { getHostsForAssignmentHandler } = await import("./getHostsForAssignment.handler");
@@ -181,10 +169,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  exportHostsForWeights: createEventPbacProcedure("eventType.update", [
-    MembershipRole.ADMIN,
-    MembershipRole.OWNER,
-  ])
+  exportHostsForWeights: authedAdminProcedure
     .input(ZExportHostsForWeightsInputSchema)
     .query(async ({ ctx, input }) => {
       const { exportHostsForWeightsHandler } = await import("./exportHostsForWeights.handler");
@@ -195,10 +180,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  getChildrenForAssignment: createEventPbacProcedure("eventType.update", [
-    MembershipRole.ADMIN,
-    MembershipRole.OWNER,
-  ])
+  getChildrenForAssignment: authedAdminProcedure
     .input(ZGetChildrenForAssignmentInputSchema)
     .query(async ({ ctx, input }) => {
       const { getChildrenForAssignmentHandler } = await import("./getChildrenForAssignment.handler");
@@ -209,10 +191,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  getHostsWithLocationOptions: createEventPbacProcedure("eventType.update", [
-    MembershipRole.ADMIN,
-    MembershipRole.OWNER,
-  ])
+  getHostsWithLocationOptions: authedAdminProcedure
     .input(ZGetHostsWithLocationOptionsInputSchema)
     .query(async ({ ctx, input }) => {
       const { getHostsWithLocationOptionsHandler } = await import("./getHostsWithLocationOptions.handler");
@@ -223,10 +202,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  massApplyHostLocation: createEventPbacProcedure("eventType.update", [
-    MembershipRole.ADMIN,
-    MembershipRole.OWNER,
-  ])
+  massApplyHostLocation: authedAdminProcedure
     .input(ZMassApplyHostLocationInputSchema)
     .mutation(async ({ ctx, input }) => {
       const { massApplyHostLocationHandler } = await import("./massApplyHostLocation.handler");
@@ -237,7 +213,7 @@ export const eventTypesRouter = router({
       });
     }),
 
-  searchTeamMembers: authedProcedure
+  searchTeamMembers: authedAdminProcedure
     .input(ZSearchTeamMembersInputSchema)
     .query(async ({ ctx, input }) => {
       const { searchTeamMembersHandler } = await import("./searchTeamMembers.handler");

@@ -1,10 +1,8 @@
+import { IS_DUB_REFERRALS_ENABLED } from "@calcom/lib/constants";
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import { getTranslate } from "app/_utils";
 import type { Metadata } from "next";
-
-import { IS_DUB_REFERRALS_ENABLED } from "@calcom/lib/constants";
-
 import Shell from "~/shell/Shell";
-
 import { DubReferralsPage } from "./DubReferralsPage";
 
 export const metadata: Metadata = {
@@ -15,6 +13,8 @@ export const metadata: Metadata = {
 
 // Export the appropriate component based on the feature flag
 export default async function ReferralsPage() {
+  await requireAuthenticatedPage("/refer");
+
   const t = await getTranslate();
 
   return (

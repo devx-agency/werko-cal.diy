@@ -1,10 +1,9 @@
+import { getStaticProps } from "@lib/apps/[slug]/getStaticProps";
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps as _PageProps } from "app/_types";
 import { generateAppMetadata } from "app/_utils";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-
-import { getStaticProps } from "@lib/apps/[slug]/getStaticProps";
-
 import AppView from "~/apps/[slug]/slug-view";
 
 const paramsSchema = z.object({
@@ -18,6 +17,7 @@ export const generateMetadata = async ({ params }: _PageProps) => {
     return notFound();
   }
   const slugFromUrl = p.data.slug;
+  await requireAuthenticatedPage(`/apps/${encodeURIComponent(slugFromUrl)}`);
   const props = await getStaticProps(slugFromUrl);
 
   if (!props) {
@@ -42,6 +42,7 @@ async function Page({ params }: _PageProps) {
     return notFound();
   }
 
+  await requireAuthenticatedPage(`/apps/${encodeURIComponent(p.data.slug)}`);
   const props = await getStaticProps(p.data.slug);
 
   if (!props) {

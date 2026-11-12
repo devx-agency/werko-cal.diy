@@ -1,19 +1,22 @@
-import { _generateMetadata } from "app/_utils";
-import { getTranslate } from "app/_utils";
-
-import AdminAppsList from "~/apps/components/AdminAppsList";
 import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
+import { requireAdminPage } from "app/_lib/pageAuthorization";
+import { _generateMetadata, getTranslate } from "app/_utils";
+import AdminAppsList from "~/apps/components/AdminAppsList";
 
-export const generateMetadata = async ({ params }: { params: Promise<{ category: string }> }) =>
-  await _generateMetadata(
+export const generateMetadata = async ({ params }: { params: Promise<{ category: string }> }) => {
+  const { category } = await params;
+  return await _generateMetadata(
     (t) => t("apps"),
     (t) => t("admin_apps_description"),
     undefined,
     undefined,
-    `/settings/admin/apps/${(await params).category}`
+    `/settings/admin/apps/${category}`
   );
+};
 
-const Page = async () => {
+const Page = async ({ params }: { params: Promise<{ category: string }> }) => {
+  const { category } = await params;
+  await requireAdminPage(`/settings/admin/apps/${encodeURIComponent(category)}`);
   const t = await getTranslate();
 
   return (

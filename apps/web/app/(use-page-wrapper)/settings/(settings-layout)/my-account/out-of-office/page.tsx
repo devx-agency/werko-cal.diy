@@ -1,5 +1,5 @@
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import { _generateMetadata } from "app/_utils";
-
 import OutOfOfficeView from "~/settings/my-account/out-of-office-view";
 
 export const generateMetadata = async () =>
@@ -11,7 +11,8 @@ export const generateMetadata = async () =>
     "/settings/my-account/out-of-office"
   );
 
-const Page = () => {
+const Page = async () => {
+  await requireAuthenticatedPage("/settings/my-account/out-of-office");
   return <OutOfOfficeView />;
 };
 

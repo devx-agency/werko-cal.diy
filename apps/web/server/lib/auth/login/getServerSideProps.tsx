@@ -1,6 +1,7 @@
 import process from "node:process";
+import { IS_AUTHENTIK_LOGIN_ENABLED } from "@calcom/features/auth/lib/authentik";
 import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
-import { WEBSITE_URL } from "@calcom/lib/constants";
+import { WEBAPP_URL, WEBSITE_URL } from "@calcom/lib/constants";
 import { getSafeRedirectUrl } from "@calcom/lib/getSafeRedirectUrl";
 import prisma from "@calcom/prisma";
 import { IS_GOOGLE_LOGIN_ENABLED } from "@server/lib/constants";
@@ -24,9 +25,11 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   };
 
   let totpEmail = null;
+  let totpToken = null;
   if (context.query.totp) {
     try {
-      const decryptedJwt = await verifyJwt(context.query.totp as string);
+      totpToken = context.query.totp as string;
+      const decryptedJwt = await verifyJwt(totpToken);
       if (decryptedJwt.payload) {
         totpEmail = decryptedJwt.payload.email as string;
       } else {
@@ -52,7 +55,8 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
     if (callbackUrl) {
       try {
-        const destination = getSafeRedirectUrl(callbackUrl as string);
+        const callbackTarget = new URL(callbackUrl as string, WEBAPP_URL).toString();
+        const destination = getSafeRedirectUrl(callbackTarget);
         if (destination) {
           return {
             redirect: {
@@ -89,7 +93,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       csrfToken: await getCsrfToken(context),
       isGoogleLoginEnabled: IS_GOOGLE_LOGIN_ENABLED,
       isOutlookLoginEnabled: false,
+      isAuthentikLoginEnabled: IS_AUTHENTIK_LOGIN_ENABLED,
       totpEmail,
+      totpToken,
     },
   };
 }

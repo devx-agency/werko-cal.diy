@@ -6,9 +6,10 @@ import { Alert } from "@calcom/ui/components/alert";
 import { Badge } from "@calcom/ui/components/badge";
 import { SettingsToggle } from "@calcom/ui/components/form";
 import { SkeletonButton, SkeletonContainer, SkeletonText } from "@calcom/ui/components/skeleton";
+import { signOutFromCal } from "@calcom/web/modules/auth/signOut";
 import DisableTwoFactorModal from "@components/settings/DisableTwoFactorModal";
 import EnableTwoFactorModal from "@components/settings/EnableTwoFactorModal";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 
 const SkeletonLoader = () => {
@@ -66,7 +67,7 @@ const TwoFactorAuthView = () => {
           if (sessionData?.user.role === "INACTIVE_ADMIN") {
             // Session role is set at login time, so we need to sign out
             // and sign back in to refresh the role and dismiss the banner
-            signOut({ callbackUrl: "/auth/login" });
+            signOutFromCal("/auth/login");
           } else {
             utils.viewer.me.invalidate();
           }

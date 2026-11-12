@@ -1,5 +1,8 @@
 import process from "node:process";
+import { WEBAPP_URL } from "@calcom/lib/constants";
+import { defaultCookies } from "@calcom/lib/default-cookies";
 import { getCspHeader, getCspNonce } from "@lib/csp";
+import { getSessionCookieNames } from "@lib/sessionCookies";
 import { get } from "@vercel/edge-config";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -98,7 +101,14 @@ const proxy = async (req: NextRequest): Promise<NextResponse<unknown>> => {
   });
 
   if (url.pathname.startsWith("/auth/logout")) {
-    res.cookies.delete("next-auth.session-token");
+    const sessionCookie = defaultCookies(WEBAPP_URL.startsWith("https://")).sessionToken;
+    const cookieNames = getSessionCookieNames(
+      sessionCookie.name,
+      reqWithEnrichedHeaders.cookies.getAll().map(({ name }) => name)
+    );
+    for (const name of cookieNames) {
+      res.cookies.set(name, "", { ...sessionCookie.options, maxAge: 0 });
+    }
   }
 
   return responseWithHeaders({ url, res, req: reqWithEnrichedHeaders });

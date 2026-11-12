@@ -3,6 +3,7 @@ import { useLocale } from "@calcom/lib/hooks/useLocale";
 import useMeQuery from "@calcom/trpc/react/hooks/useMeQuery";
 import classNames from "@calcom/ui/classNames";
 import { Avatar } from "@calcom/ui/components/avatar";
+import { signOutFromCal } from "@calcom/web/modules/auth/signOut";
 import {
   Menu,
   MenuItem,
@@ -24,7 +25,6 @@ import {
   UserIcon,
 } from "@coss/ui/icons";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import type { MouseEvent } from "react";
 import { useEffect, useState } from "react";
 
@@ -190,7 +190,7 @@ export function UserDropdown({ small }: UserDropdownProps) {
           <MenuItem
             variant="destructive"
             onClick={() => {
-              signOut({ callbackUrl: "/auth/logout" });
+              signOutFromCal();
             }}>
             <LogOutIcon />
             {t("sign_out")}

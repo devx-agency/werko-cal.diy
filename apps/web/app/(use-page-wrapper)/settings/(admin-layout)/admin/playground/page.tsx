@@ -1,5 +1,6 @@
 import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
 import { Icon } from "@calcom/ui/components/icon";
+import { requireAdminPage } from "app/_lib/pageAuthorization";
 import { _generateMetadata, getTranslate } from "app/_utils";
 import Link from "next/link";
 
@@ -12,16 +13,18 @@ const LINKS = [
   },
 ];
 
-export const generateMetadata = async () =>
-  await _generateMetadata(
+export const generateMetadata = async () => {
+  return await _generateMetadata(
     (t) => t("playground"),
     (t) => t("admin_playground_description"),
     undefined,
     undefined,
     "/settings/admin/playground"
   );
+};
 
 const Page = async () => {
+  await requireAdminPage("/settings/admin/playground");
   const t = await getTranslate();
   return (
     <SettingsHeader title={t("playground")} description={t("admin_playground_description")}>

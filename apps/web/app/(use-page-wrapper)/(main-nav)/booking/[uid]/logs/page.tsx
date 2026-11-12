@@ -1,17 +1,16 @@
 // Added as a separate route for now to ease the testing of the audit logs feature
 // It partially matches the figma design - https://www.figma.com/design/wleA2SR6rn60EK7ORxAfMy/Cal.diy-New-Features?node-id=5641-6732&p=f
 // TOOD: Move it to the booking page side bar later
-import { ShellMainAppDir } from "app/(use-page-wrapper)/(main-nav)/ShellMainAppDir";
-import type { PageProps } from "app/_types";
-import { _generateMetadata, getTranslate } from "app/_utils";
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
 import { BookingHistoryPage } from "@calcom/web/modules/booking-audit/components/BookingHistoryPage";
+import { buildLegacyRequest } from "@lib/buildLegacyCtx";
+import { createLocalPath, requireAuthenticatedPage, requireBookingAccess } from "app/_lib/pageAuthorization";
+import type { PageProps } from "app/_types";
+import { _generateMetadata, getTranslate } from "app/_utils";
+import { ShellMainAppDir } from "app/(use-page-wrapper)/(main-nav)/ShellMainAppDir";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const generateMetadata = async ({ params }: { params: Promise<{ uid: string }> }) =>
   await _generateMetadata(
@@ -30,12 +29,9 @@ const Page = async ({ params }: PageProps) => {
     redirect("/bookings/upcoming");
   }
 
+  const session = await requireAuthenticatedPage(createLocalPath(`/booking/${bookingUid}/logs`));
+  await requireBookingAccess(bookingUid, session.user);
   const t = await getTranslate();
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-
-  if (!session?.user?.id) {
-    redirect("/auth/login");
-  }
 
   return (
     <ShellMainAppDir heading={t("booking_history")} subtitle={t("booking_history_description")}>

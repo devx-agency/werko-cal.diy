@@ -1,16 +1,14 @@
-import { withAppDirSsr } from "app/WithAppDirSsr";
+import { getServerSideProps } from "@calcom/app-store/_pages/setup/_getServerSideProps";
+import { buildLegacyCtxFromNextRequest } from "@lib/buildLegacyCtx";
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps as ServerPageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
-import { cookies, headers } from "next/headers";
-
-import { getServerSideProps } from "@calcom/app-store/_pages/setup/_getServerSideProps";
-
-import { buildLegacyCtx } from "@lib/buildLegacyCtx";
-
+import { withAppDirSsr } from "app/WithAppDirSsr";
 import SetupView, { type PageProps as ClientPageProps } from "~/apps/[slug]/setup/setup-view";
 
 export const generateMetadata = async ({ params: _params }: ServerPageProps) => {
   const params = await _params;
+  await requireAuthenticatedPage(`/apps/${encodeURIComponent(`${params.slug}`)}/setup`);
   const metadata = await _generateMetadata(
     () => `${params.slug}`,
     () => "",
@@ -30,7 +28,12 @@ export const generateMetadata = async ({ params: _params }: ServerPageProps) => 
 const getData = withAppDirSsr<ClientPageProps>(getServerSideProps);
 
 const ServerPage = async ({ params, searchParams }: ServerPageProps) => {
-  const context = buildLegacyCtx(await headers(), await cookies(), await params, await searchParams);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  await requireAuthenticatedPage(
+    createLocalPath(`/apps/${encodeURIComponent(`${resolvedParams.slug}`)}/setup`, resolvedSearchParams)
+  );
+  const context = await buildLegacyCtxFromNextRequest(resolvedParams, resolvedSearchParams);
 
   const props = await getData(context);
   return <SetupView {...props} />;

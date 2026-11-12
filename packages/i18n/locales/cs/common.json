@@ -370,6 +370,7 @@
   "sign_up": "Přihlásit se",
   "youve_been_logged_out": "Byli jste odhlášeni",
   "hope_to_see_you_soon": "Brzy naviděnou!",
+  "authentik_logout_failed": "Z Cal.diy jste byli odhlášeni, ale odhlášení z Authentiku se nepodařilo. Před změnou účtu se z Authentiku odhlaste ručně.",
   "logged_out": "Odhlášen",
   "please_try_again_and_contact_us": "Zkuste to prosím znovu a pokud problém přetrvává, kontaktujte nás.",
   "incorrect_2fa_code": "Kód k dvoufázovému přihlášení není správný.",
@@ -1355,6 +1356,7 @@
   "account_managed_by_identity_provider_error": "Váš účet je spravován jiným poskytovatelem identity. Zkuste se přihlásit pomocí {{provider}}.",
   "user_creation_error": "Chyba při vytváření nového uživatele. Zkuste to prosím znovu.",
   "signin_with_google": "Přihlásit se pomocí Googlu",
+  "signin_with_authentik": "Přihlásit se přes Authentik",
   "signin_with_saml": "Přihlásit se pomocí SAML",
   "signin_with_saml_oidc": "Přihlášení pomocí SAML/OIDC",
   "continue_with_email": "Pokračovat s e-mailem",
@@ -4635,5 +4637,9 @@
   "paypal_step_7": "Po tomto kroku byste měli být plně nastaveni.",
   "dashboard": "nástěnku",
   "paypal_webhook_reminder": "Naše integrace vytváří specifický webhook na vašem PayPal účtu, který používáme k hlášení transakcí do našeho systému. Pokud tento webhook smažete, nebudeme schopni hlásit transakce zpět a měli byste aplikaci odinstalovat a znovu nainstalovat, aby vše fungovalo správně. Odinstalování aplikace nesmaže vaši aktuální konfiguraci ceny/měny typu události, ale nebudete moci přijímat rezervace.",
+  "public_event_catalog_title": "Dostupné události",
+  "public_event_catalog_empty": "Momentálně nejsou k dispozici žádné veřejné události.",
+  "public_event_catalog_duration": "{{duration}} minut",
+  "public_event_catalog_host": "Pořadatel: {{host}}",
   "ADD_NEW_STRINGS_ABOVE_THIS_LINE_TO_PREVENT_MERGE_CONFLICTS": "↑↑↑↑↑↑↑↑↑↑↑↑↑ Přidejte své nové řetězce nahoru ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑"
 }

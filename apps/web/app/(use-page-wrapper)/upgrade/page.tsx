@@ -1,4 +1,5 @@
 import { _generateMetadata } from "app/_utils";
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 
 import LegacyPage from "~/upgrade/upgrade-view";
 
@@ -12,6 +13,8 @@ export const generateMetadata = async () =>
   );
 
 const ServerPage = async () => {
+  await requireAuthenticatedPage("/upgrade");
+
   return <LegacyPage />;
 };
 

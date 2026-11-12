@@ -1,8 +1,6 @@
-import { _generateMetadata } from "app/_utils";
-import { getTranslate } from "app/_utils";
-
 import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
-
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
+import { _generateMetadata, getTranslate } from "app/_utils";
 import TwoFactorAuthView from "~/settings/security/two-factor-auth-view";
 
 export const generateMetadata = async () =>
@@ -14,6 +12,7 @@ export const generateMetadata = async () =>
     "/settings/security/two-factor-auth"
   );
 const Page = async () => {
+  await requireAuthenticatedPage("/settings/security/two-factor-auth");
   const t = await getTranslate();
 
   return (

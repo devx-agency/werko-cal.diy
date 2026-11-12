@@ -1,17 +1,13 @@
-import { _generateMetadata } from "app/_utils";
-import { cookies, headers } from "next/headers";
-
 import { getAppRegistry, getAppRegistryWithCredentials } from "@calcom/app-store/_appRegistry";
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { UserRepository } from "@calcom/features/users/repositories/UserRepository";
 import prisma from "@calcom/prisma";
 import type { AppCategories } from "@calcom/prisma/enums";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
+import { requireAuthenticatedPage } from "app/_lib/pageAuthorization";
+import { _generateMetadata } from "app/_utils";
 import AppsPage from "~/apps/apps-view";
 
 export const generateMetadata = async () => {
+  await requireAuthenticatedPage("/apps");
   return await _generateMetadata(
     (t) => t("app_store"),
     (t) => t("app_store_description"),
@@ -22,18 +18,11 @@ export const generateMetadata = async () => {
 };
 
 const ServerPage = async () => {
-  const req = buildLegacyRequest(await headers(), await cookies());
-  const session = await getServerSession({ req });
-  let appStore, userAdminTeamsIds: number[];
-  if (session?.user?.id) {
-    const userRepo = new UserRepository(prisma);
-    const userAdminTeams = await userRepo.getUserAdminTeams({ userId: session.user.id });
-    userAdminTeamsIds = userAdminTeams?.teams?.map(({ team }) => team.id) ?? [];
-    appStore = await getAppRegistryWithCredentials(session.user.id, userAdminTeamsIds);
-  } else {
-    appStore = await getAppRegistry();
-    userAdminTeamsIds = [];
-  }
+  const session = await requireAuthenticatedPage("/apps");
+  const userRepo = new UserRepository(prisma);
+  const userAdminTeams = await userRepo.getUserAdminTeams({ userId: session.user.id });
+  const userAdminTeamsIds = userAdminTeams?.teams?.map(({ team }) => team.id) ?? [];
+  const appStore = await getAppRegistryWithCredentials(session.user.id, userAdminTeamsIds);
 
   const categoryQuery = appStore.map(({ categories }) => ({
     categories: categories || [],
@@ -54,14 +43,12 @@ const ServerPage = async () => {
         name: name as AppCategories,
         count,
       }))
-      .sort(function (a, b) {
-        return b.count - a.count;
-      }),
+      .sort((a, b) => b.count - a.count),
     appStore,
     userAdminTeams: userAdminTeamsIds,
   };
 
-  return <AppsPage {...props} isAdmin={session?.user?.role === "ADMIN"} />;
+  return <AppsPage {...props} isAdmin={session.user.role === "ADMIN"} />;
 };
 
 export default ServerPage;

@@ -44,19 +44,6 @@ import {
   getSchemaPath,
 } from "@nestjs/swagger";
 import { Request } from "express";
-import { BookingPbacGuard } from "@/platform/bookings/2024-08-13/guards/booking-pbac.guard";
-import { BookingUidGuard } from "@/platform/bookings/2024-08-13/guards/booking-uid.guard";
-import { BookingReferencesFilterInput_2024_08_13 } from "@/platform/bookings/2024-08-13/inputs/booking-references-filter.input";
-import { BookingReferencesOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/booking-references.output";
-import { CalendarLinksOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/calendar-links.output";
-import { CancelBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/cancel-booking.output";
-import { CreateBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/create-booking.output";
-import { MarkAbsentBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/mark-absent.output";
-import { ReassignBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/reassign-booking.output";
-import { RescheduleBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/reschedule-booking.output";
-import { BookingReferencesService_2024_08_13 } from "@/platform/bookings/2024-08-13/services/booking-references.service";
-import { BookingsService_2024_08_13 } from "@/platform/bookings/2024-08-13/services/bookings.service";
-import { CalVideoService } from "@/platform/bookings/2024-08-13/services/cal-video.service";
 import { VERSION_2024_08_13, VERSION_2024_08_13_VALUE } from "@/lib/api-versions";
 import {
   API_KEY_OR_ACCESS_TOKEN_HEADER,
@@ -76,6 +63,19 @@ import { OptionalApiAuthGuard } from "@/modules/auth/guards/optional-api-auth/op
 import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
 import { ApiAuthGuardUser } from "@/modules/auth/strategies/api-auth/api-auth.strategy";
 import { UsersService } from "@/modules/users/services/users.service";
+import { BookingPbacGuard } from "@/platform/bookings/2024-08-13/guards/booking-pbac.guard";
+import { BookingUidGuard } from "@/platform/bookings/2024-08-13/guards/booking-uid.guard";
+import { BookingReferencesFilterInput_2024_08_13 } from "@/platform/bookings/2024-08-13/inputs/booking-references-filter.input";
+import { BookingReferencesOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/booking-references.output";
+import { CalendarLinksOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/calendar-links.output";
+import { CancelBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/cancel-booking.output";
+import { CreateBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/create-booking.output";
+import { MarkAbsentBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/mark-absent.output";
+import { ReassignBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/reassign-booking.output";
+import { RescheduleBookingOutput_2024_08_13 } from "@/platform/bookings/2024-08-13/outputs/reschedule-booking.output";
+import { BookingReferencesService_2024_08_13 } from "@/platform/bookings/2024-08-13/services/booking-references.service";
+import { BookingsService_2024_08_13 } from "@/platform/bookings/2024-08-13/services/bookings.service";
+import { CalVideoService } from "@/platform/bookings/2024-08-13/services/cal-video.service";
 
 @Controller({
   path: "/v2/bookings",
@@ -103,10 +103,10 @@ export class BookingsController_2024_08_13 {
   ) {}
 
   @Post("/")
-  @UseGuards(OptionalApiAuthGuard)
+  @UseGuards(ApiAuthGuard)
   @ApiHeader(OPTIONAL_X_CAL_CLIENT_ID_HEADER)
   @ApiHeader(OPTIONAL_X_CAL_SECRET_KEY_HEADER)
-  @ApiHeader(OPTIONAL_API_KEY_OR_ACCESS_TOKEN_HEADER)
+  @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)
   @ApiOperation({
     summary: "Create a booking",
     description: `
@@ -164,7 +164,7 @@ export class BookingsController_2024_08_13 {
   @UseGuards(OptionalApiAuthGuard)
   @ApiHeader(OPTIONAL_X_CAL_CLIENT_ID_HEADER)
   @ApiHeader(OPTIONAL_X_CAL_SECRET_KEY_HEADER)
-  @ApiHeader(OPTIONAL_API_KEY_OR_ACCESS_TOKEN_HEADER)
+  @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)
   @ApiOperation({
     summary: "Get a booking by seat UID",
     description: `Get a seated booking by its seat reference UID. This is useful when you have a seatUid from a seated booking and want to retrieve the full booking details.
@@ -188,10 +188,11 @@ export class BookingsController_2024_08_13 {
   }
 
   @Get("/:bookingUid")
-  @UseGuards(BookingUidGuard, OptionalApiAuthGuard)
+  @Permissions([BOOKING_READ])
+  @UseGuards(ApiAuthGuard, BookingUidGuard, BookingPbacGuard)
   @ApiHeader(OPTIONAL_X_CAL_CLIENT_ID_HEADER)
   @ApiHeader(OPTIONAL_X_CAL_SECRET_KEY_HEADER)
-  @ApiHeader(OPTIONAL_API_KEY_OR_ACCESS_TOKEN_HEADER)
+  @ApiHeader(API_KEY_OR_ACCESS_TOKEN_HEADER)
   @ApiOperation({
     summary: "Get a booking",
     description: `\`:bookingUid\` can be

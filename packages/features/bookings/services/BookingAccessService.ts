@@ -1,23 +1,11 @@
 import { UserRepository } from "@calcom/features/users/repositories/UserRepository";
 import type { PrismaClient } from "@calcom/prisma";
-import { MembershipRole } from "@calcom/prisma/enums";
 import { BookingRepository } from "../repositories/BookingRepository";
-
-class PermissionCheckService {
-  constructor(_prisma?: unknown) {}
-  async checkPermission(..._args: unknown[]) { return true; }
-  async hasPermission(..._args: unknown[]) { return true; }
-  async getTeamIdsWithPermission(..._args: unknown[]): Promise<number[]> { return []; }
-}
 
 type BookingForAccessCheck = NonNullable<Awaited<ReturnType<BookingRepository["findByUidIncludeEventType"]>>>;
 
 export class BookingAccessService {
-  private permissionCheckService: PermissionCheckService;
-
-  constructor(private prismaClient: PrismaClient) {
-    this.permissionCheckService = new PermissionCheckService();
-  }
+  constructor(private prismaClient: PrismaClient) {}
 
   private isUserAHost(userId: number, booking: BookingForAccessCheck): boolean {
     const hostMap = new Map<number, { id: number; email: string }>();
@@ -82,15 +70,10 @@ export class BookingAccessService {
 
     // Case 3: If booking has a teamId, check if user has access to team bookings
     if (booking.eventType?.teamId) {
-      const teamId = booking.eventType.teamId;
-
-      const hasAccess = await this.permissionCheckService.checkPermission({
+      return userRepo.isAdminOfTeamOrParentOrg({
         userId,
-        teamId,
-        permission: "booking.readTeamBookings",
-        fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
+        teamId: booking.eventType.teamId,
       });
-      return hasAccess;
     }
 
     // For managed events (child event types), check the parent's teamId
@@ -110,13 +93,9 @@ export class BookingAccessService {
 
     // Case 4: Check if user is admin of booking organizer's organization
     if (bookingOwner.organizationId) {
-      const orgId = bookingOwner.organizationId;
-
-      const hasAccess = await this.permissionCheckService.checkPermission({
+      const hasAccess = await userRepo.isAdminOfTeamOrParentOrg({
         userId,
-        teamId: orgId,
-        permission: "booking.readOrgBookings",
-        fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
+        teamId: bookingOwner.organizationId,
       });
       if (hasAccess) return true;
     }
@@ -125,11 +104,9 @@ export class BookingAccessService {
     for (const membership of bookingOwner.teams) {
       const teamId = membership.teamId;
 
-      const hasAccess = await this.permissionCheckService.checkPermission({
+      const hasAccess = await userRepo.isAdminOfTeamOrParentOrg({
         userId,
         teamId,
-        permission: "booking.readTeamBookings",
-        fallbackRoles: [MembershipRole.OWNER, MembershipRole.ADMIN],
       });
       if (hasAccess) return true;
     }

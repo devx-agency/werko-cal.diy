@@ -1,13 +1,11 @@
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { eventTypesRouter } from "@calcom/trpc/server/routers/viewer/eventTypes/_router";
 import { EventTypeWebWrapper } from "@calcom/web/modules/event-types/components/EventTypeWebWrapper";
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
+import { createLocalPath, requireAdminPage } from "app/_lib/pageAuthorization";
 import { createRouterCaller, getTRPCContext } from "app/_trpc/context";
 import type { PageProps, ReadonlyHeaders, ReadonlyRequestCookies } from "app/_types";
 import { _generateMetadata } from "app/_utils";
 import { unstable_cache } from "next/cache";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const querySchema = z.object({
@@ -39,12 +37,9 @@ const getCachedEventType = unstable_cache(
 );
 
 const ServerPage = async ({ params }: PageProps) => {
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-  if (!session?.user?.id) {
-    return redirect("/auth/login");
-  }
-
-  const parsed = querySchema.safeParse(await params);
+  const resolvedParams = await params;
+  await requireAdminPage(createLocalPath(`/event-types/${encodeURIComponent(`${resolvedParams.type}`)}`));
+  const parsed = querySchema.safeParse(resolvedParams);
   if (!parsed.success) {
     throw new Error("Invalid Event Type id");
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import process from "node:process";
 import { ErrorCode } from "@calcom/features/auth/lib/ErrorCode";
 import { HOSTED_CAL_FEATURES, WEBAPP_URL, WEBSITE_URL } from "@calcom/lib/constants";
 import { emailRegex } from "@calcom/lib/emailSchema";
@@ -24,7 +25,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -34,15 +35,12 @@ interface LoginValues {
   totpCode: string;
   backupCode: string;
   csrfToken: string;
+  totpToken: string | null;
 }
 
-const MicrosoftIcon = () => (
-  <img className="size-4" src="/microsoft-logo.svg" alt="" />
-);
+const MicrosoftIcon = () => <img className="size-4" src="/microsoft-logo.svg" alt="" />;
 
-const GoogleIcon = () => (
-  <img className="size-4" src="/google-icon-colored.svg" alt="" />
-);
+const GoogleIcon = () => <img className="size-4" src="/google-icon-colored.svg" alt="" />;
 
 function BackgroundGrid() {
   const rows = 9;
@@ -105,7 +103,9 @@ export default function Login({
   csrfToken,
   isGoogleLoginEnabled,
   isOutlookLoginEnabled,
+  isAuthentikLoginEnabled,
   totpEmail,
+  totpToken,
 }: PageProps) {
   const searchParams = useCompatSearchParams();
   const { t } = useLocale();
@@ -127,6 +127,7 @@ export default function Login({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastUsed, setLastUsed] = useLastUsed();
   const [showPassword, setShowPassword] = useState(false);
+  const [authentikSignInPending, setAuthentikSignInPending] = useState(false);
 
   const errorMessages: { [key: string]: string } = {
     // [ErrorCode.SecondFactorRequired]: t("2fa_enabled_instructions"),
@@ -137,24 +138,34 @@ export default function Login({
     [ErrorCode.ThirdPartyIdentityProviderEnabled]: t("account_created_with_identity_provider"),
   };
 
-  let callbackUrl = searchParams?.get("callbackUrl") || "";
+  const callbackParam = searchParams?.get("callbackUrl") || "/";
+  const callbackTarget = /^https?:\/\//i.test(callbackParam)
+    ? callbackParam
+    : new URL(callbackParam.startsWith("/") ? callbackParam : `/${callbackParam}`, WEBAPP_URL).toString();
+  const callbackUrl = getSafeRedirectUrl(callbackTarget) ?? WEBAPP_URL;
+  const hasAuthentikError = Boolean(searchParams?.get("error"));
+  const hasAuthentikSignInStarted = useRef(false);
 
-  if (/"\//.test(callbackUrl)) callbackUrl = callbackUrl.substring(1);
-
-  // If not absolute URL, make it absolute
-  if (!/^https?:\/\//.test(callbackUrl)) {
-    callbackUrl = `${WEBAPP_URL}/${callbackUrl}`;
-  }
-
-  const safeCallbackUrl = getSafeRedirectUrl(callbackUrl);
-
-  callbackUrl = safeCallbackUrl || "";
+  useEffect(() => {
+    if (
+      !totpToken &&
+      !twoFactorRequired &&
+      isAuthentikLoginEnabled &&
+      !hasAuthentikError &&
+      !hasAuthentikSignInStarted.current
+    ) {
+      hasAuthentikSignInStarted.current = true;
+      setAuthentikSignInPending(true);
+      void signIn("authentik", { callbackUrl });
+    }
+  }, [callbackUrl, hasAuthentikError, isAuthentikLoginEnabled, totpToken, twoFactorRequired]);
 
   const onSubmit = async (values: LoginValues) => {
     setErrorMessage(null);
     // telemetry.event(telemetryEventTypes.login, collectPageParameters());
     const res = await signIn<"credentials">("credentials", {
       ...values,
+      totpToken,
       callbackUrl,
       redirect: false,
     });
@@ -170,7 +181,7 @@ export default function Login({
     else setErrorMessage(errorMessages[res.error] || t("something_went_wrong"));
   };
 
-  const showSocialLogin = isGoogleLoginEnabled || isOutlookLoginEnabled;
+  const showSocialLogin = isGoogleLoginEnabled || isOutlookLoginEnabled || isAuthentikLoginEnabled;
   const showSignupLink =
     process.env.NEXT_PUBLIC_DISABLE_SIGNUP !== "true" && searchParams?.get("register") !== "false";
 
@@ -190,6 +201,10 @@ export default function Login({
           <p className="mb-8 text-center text-sm text-subtle" data-testid="login-subtitle">
             {twoFactorRequired ? t("2fa_code") : t("welcome_back_sign_in")}
           </p>
+
+          {hasAuthentikError && !twoFactorRequired && (
+            <Alert severity="error" title={t("something_went_wrong")} className="mb-4" />
+          )}
 
           <FormProvider {...methods}>
             {/* Social Login Buttons */}
@@ -230,6 +245,26 @@ export default function Login({
                       {lastUsed === "microsoft" && <LastUsed />}
                     </Button>
                   )}
+                  {isAuthentikLoginEnabled && (
+                    <Button
+                      variant="outline"
+                      className="w-full py-1"
+                      disabled={authentikSignInPending}
+                      data-testid="authentik"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        if (hasAuthentikSignInStarted.current) return;
+                        hasAuthentikSignInStarted.current = true;
+                        setAuthentikSignInPending(true);
+                        setLastUsed("authentik");
+                        await signIn("authentik", {
+                          callbackUrl,
+                        });
+                      }}>
+                      <span>{t("signin_with_authentik")}</span>
+                      {lastUsed === "authentik" && <LastUsed />}
+                    </Button>
+                  )}
                 </div>
 
                 {/* Divider */}
@@ -243,6 +278,7 @@ export default function Login({
 
             <form onSubmit={methods.handleSubmit(onSubmit)} noValidate data-testid="login-form">
               <input defaultValue={csrfToken || undefined} type="hidden" hidden {...register("csrfToken")} />
+              <input defaultValue={totpToken || undefined} type="hidden" hidden {...register("totpToken")} />
 
               {!twoFactorRequired && (
                 <div className="space-y-6">

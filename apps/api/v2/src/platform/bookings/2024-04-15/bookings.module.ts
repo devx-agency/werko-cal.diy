@@ -1,12 +1,4 @@
 import { Module } from "@nestjs/common";
-import { BookingsController_2024_04_15 } from "@/platform/bookings/2024-04-15/controllers/bookings.controller";
-import { PlatformBookingsService } from "@/platform/bookings/shared/platform-bookings.service";
-import { CalendarsRepository } from "@/platform/calendars/calendars.repository";
-import { CalendarsService } from "@/platform/calendars/services/calendars.service";
-import { CalendarsCacheService } from "@/platform/calendars/services/calendars-cache.service";
-import { EventTypesModule_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/event-types.module";
-import { EventTypesModule_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/event-types.module";
-import { SchedulesModule_2024_04_15 } from "@/platform/schedules/schedules_2024_04_15/schedules.module";
 import { BookingEventHandlerModule } from "@/lib/modules/booking-event-handler.module";
 import { RecurringBookingModule } from "@/lib/modules/recurring-booking.module";
 import { RegularBookingModule } from "@/lib/modules/regular-booking.module";
@@ -26,6 +18,15 @@ import { SelectedCalendarsRepository } from "@/modules/selected-calendars/select
 import { TokensModule } from "@/modules/tokens/tokens.module";
 import { TokensRepository } from "@/modules/tokens/tokens.repository";
 import { UsersModule } from "@/modules/users/users.module";
+import { BookingsController_2024_04_15 } from "@/platform/bookings/2024-04-15/controllers/bookings.controller";
+import { BookingPbacGuard } from "@/platform/bookings/2024-08-13/guards/booking-pbac.guard";
+import { PlatformBookingsService } from "@/platform/bookings/shared/platform-bookings.service";
+import { CalendarsRepository } from "@/platform/calendars/calendars.repository";
+import { CalendarsService } from "@/platform/calendars/services/calendars.service";
+import { CalendarsCacheService } from "@/platform/calendars/services/calendars-cache.service";
+import { EventTypesModule_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/event-types.module";
+import { EventTypesModule_2024_06_14 } from "@/platform/event-types/event-types_2024_06_14/event-types.module";
+import { SchedulesModule_2024_04_15 } from "@/platform/schedules/schedules_2024_04_15/schedules.module";
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { UsersModule } from "@/modules/users/users.module";
     SelectedCalendarsRepository,
     PrismaEventTypeRepository,
     PrismaTeamRepository,
+    BookingPbacGuard,
   ],
   controllers: [BookingsController_2024_04_15],
 })

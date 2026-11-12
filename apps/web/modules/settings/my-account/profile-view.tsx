@@ -1,5 +1,6 @@
 "use client";
 
+import process from "node:process";
 import { ErrorCode } from "@calcom/features/auth/lib/ErrorCode";
 import { Dialog } from "@calcom/features/components/controlled-dialog";
 import SettingsHeader from "@calcom/features/settings/appDir/SettingsHeader";
@@ -22,6 +23,7 @@ import { Editor } from "@calcom/ui/components/editor";
 import { Form, Label, PasswordField, TextField } from "@calcom/ui/components/form";
 import { ImageUploader } from "@calcom/ui/components/image-uploader";
 import { showToast } from "@calcom/ui/components/toast";
+import { signOutFromCal } from "@calcom/web/modules/auth/signOut";
 import { DisplayInfo } from "@calcom/web/modules/users/components/UserTable/EditSheet/DisplayInfo";
 import TwoFactor from "@components/auth/TwoFactor";
 import CustomEmailTextField from "@components/settings/CustomEmailTextField";
@@ -34,7 +36,7 @@ import type { TRPCClientErrorLike } from "@trpc/client";
 import { revalidateSettingsProfile } from "app/cache/path/settings/my-account";
 // eslint-disable-next-line no-restricted-imports
 import { get, pick } from "lodash";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import type React from "react";
 import type { BaseSyntheticEvent } from "react";
 import { useRef, useState } from "react";
@@ -146,9 +148,9 @@ const ProfileView = ({ user }: Props) => {
 
     setHasDeleteErrors(false); // dismiss any open errors
     if (process.env.NEXT_PUBLIC_WEBAPP_URL === "https://app.cal.com") {
-      signOut({ callbackUrl: "/auth/logout?survey=true" });
+      signOutFromCal("/auth/logout?survey=true");
     } else {
-      signOut({ callbackUrl: "/auth/logout" });
+      signOutFromCal();
     }
   };
 

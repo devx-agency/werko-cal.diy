@@ -1,35 +1,32 @@
+import { WebhookRepository } from "@calcom/features/webhooks/lib/repository/WebhookRepository";
+import { APP_NAME } from "@calcom/lib/constants";
+import prisma from "@calcom/prisma";
+import { MembershipRole } from "@calcom/prisma/enums";
+import { createLocalPath, requireAuthenticatedPage } from "app/_lib/pageAuthorization";
 import type { PageProps } from "app/_types";
 import { _generateMetadata } from "app/_utils";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-
-import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
-import { WebhookRepository } from "@calcom/features/webhooks/lib/repository/WebhookRepository";
-import prisma from "@calcom/prisma";
-import { APP_NAME } from "@calcom/lib/constants";
-import { MembershipRole } from "@calcom/prisma/enums";
-
-import { buildLegacyRequest } from "@lib/buildLegacyCtx";
-
 import { EditWebhookView } from "~/webhooks/views/webhook-edit-view";
 
-export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) =>
-  await _generateMetadata(
+export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
+  await requireAuthenticatedPage(`/settings/developer/webhooks/${encodeURIComponent(id)}`);
+  return await _generateMetadata(
     (t) => t("webhooks"),
     (t) => t("add_webhook_description", { appName: APP_NAME }),
     undefined,
     undefined,
-    `/settings/developer/webhooks/${(await params).id}`
+    `/settings/developer/webhooks/${id}`
   );
+};
 
 const Page = async ({ params: _params }: PageProps) => {
-  const session = await getServerSession({ req: buildLegacyRequest(await headers(), await cookies()) });
-  if (!session?.user?.id) {
-    return redirect("/auth/login");
-  }
-
   const params = await _params;
   const id = typeof params?.id === "string" ? params.id : undefined;
+  const session = await requireAuthenticatedPage(
+    createLocalPath(`/settings/developer/webhooks/${encodeURIComponent(id ?? "")}`)
+  );
 
   const webhookRepository = WebhookRepository.getInstance();
   const webhook = await webhookRepository.findByWebhookId(id);

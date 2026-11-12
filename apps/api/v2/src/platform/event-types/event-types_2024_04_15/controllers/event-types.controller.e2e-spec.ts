@@ -24,6 +24,12 @@ import { randomString } from "test/utils/randomString";
 import { withApiAuth } from "test/utils/withApiAuth";
 import { AppModule } from "@/app.module";
 import { bootstrap } from "@/bootstrap";
+import { HttpExceptionFilter } from "@/filters/http-exception.filter";
+import { PrismaExceptionFilter } from "@/filters/prisma-exception.filter";
+import { ROLES } from "@/lib/roles/constants";
+import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
+import { TokensModule } from "@/modules/tokens/tokens.module";
+import { UsersModule } from "@/modules/users/users.module";
 import { Editable } from "@/platform/event-types/event-types_2024_04_15//inputs/enums/editable";
 import { EventTypesModule_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/event-types.module";
 import { CreateEventTypeInput_2024_04_15 } from "@/platform/event-types/event-types_2024_04_15/inputs/create-event-type.input";
@@ -32,11 +38,6 @@ import { UpdateEventTypeInput_2024_04_15 } from "@/platform/event-types/event-ty
 import { GetEventTypeOutput } from "@/platform/event-types/event-types_2024_04_15/outputs/get-event-type.output";
 import { GetEventTypePublicOutput } from "@/platform/event-types/event-types_2024_04_15/outputs/get-event-type-public.output";
 import { GetEventTypesPublicOutput } from "@/platform/event-types/event-types_2024_04_15/outputs/get-event-types-public.output";
-import { HttpExceptionFilter } from "@/filters/http-exception.filter";
-import { PrismaExceptionFilter } from "@/filters/prisma-exception.filter";
-import { PermissionsGuard } from "@/modules/auth/guards/permissions/permissions.guard";
-import { TokensModule } from "@/modules/tokens/tokens.module";
-import { UsersModule } from "@/modules/users/users.module";
 
 describe("Event types Endpoints", () => {
   describe("Not authenticated", () => {
@@ -113,6 +114,7 @@ describe("Event types Endpoints", () => {
         email: userEmail,
         name,
         username,
+        role: ROLES.admin,
       });
 
       await app.init();
